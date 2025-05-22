@@ -1,2 +1,3 @@
-# book_Advanced_Jinga
-Book for how code generation patterns using Jinga 
+# Advanced_Jinga
+
+Book about code generation patterns using Jinga 
