@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "macros/student_components.html" as student_macros %}
+
+{% block title %}{{ object.name }}'s Transcript{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "Students", "url": "/students"},
+        {"name": object.name, "url": "/students/" ~ object.id},
+        {"name": "Transcript"}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object and object.name %}
+        <h1>Academic Transcript for {{ object.name }}</h1>
+        <div class="card">
+            <h3>Student Information</h3>
+            <p><strong>Name:</strong> {{ object.name }}</p>
+            <p><strong>Email:</strong> {{ object.email }}</p>
+            <p><strong>Major:</strong> {{ object.major if object.major else 'Undeclared' }}</p>
+            <p><strong>Anticipated Graduation Year:</strong> {{ object.graduation_year if object.graduation_year else 'N/A' }}</p>
+            <p><strong>GPA:</strong> {{ "%.2f"|format(object.gpa) if object.gpa else 'N/A' }}</p>
+        </div>
+
+        <h2>Enrollment History</h2>
+        {% if object.enrollments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Course Title</th>
+                        <th>Course Code</th>
+                        <th>Enrollment Date</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Final Grade</th>
+                        <th>Attempt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in object.enrollments | sort(attribute='enrollment_date', reverse=True) %}
+                    <tr>
+                        <td><a href="/courses/{{ enrollment.course.id }}">{{ enrollment.course.title }}</a></td>
+                        <td>{{ enrollment.course.course_code }}</td>
+                        <td>{{ enrollment.enrollment_date }}</td>
+                        <td>
+                            {% if enrollment.status == 'active' %}
+                                {% include "student/active.html" with context %} {# Example of including status-specific snippets #}
+                            {% elif enrollment.status == 'completed' %}
+                                {% include "student/completed.html" with context %}
+                            {% elif enrollment.status == 'reattempt' %}
+                                {% include "student/reattempt.html" with context %}
+                            {% else %}
+                                {{ student_macros.status_badge(enrollment) }} {# Fallback to macro #}
+                            {% endif %}
+                        </td>
+                        <td>{{ "%.1f"|format(enrollment.progress_percentage) }}%</td>
+                        <td>{{ enrollment.grade if enrollment.grade else 'N/A' }}</td>
+                        <td>{{ enrollment.attempt_number }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No enrollment history found for this student.</p>
+        {% endif %}
+
+    {% else %}
+        <p>Student transcript not available.</p>
+    {% endif %}
+{% endblock %}
