@@ -1,6 +1,6 @@
 # Chapter 3: Configuration Pipeline Archaeology
 
-*Taming the Configuration DAG Storm with Template-Driven Intelligence*
+_Taming the Configuration DAG Storm with Template-Driven Intelligence_
 
 ---
 
@@ -31,8 +31,9 @@ Remember Chapter 1's self-modifying templates that learned from production feedb
 We're not just building another configuration management tool. We're building an **archaeological intelligence system** that uses advanced Jinja patterns to create transparency, lineage tracking, and automated analysis of configuration pipelines. Templates become intelligent middleware that can explain their own behavior, track value transformations, and generate comprehensive documentation about how configurations evolved over time.
 
 The through-line from our previous chapters is crystal clear:
+
 - **Chapter 1**: Templates that understand and modify themselves
-- **Chapter 2**: Semantic models that work across different languages and formats  
+- **Chapter 2**: Semantic models that work across different languages and formats
 - **Chapter 3**: Templates that provide archaeological intelligence for complex data pipelines
 
 By the end of this chapter, you'll have built a system that can answer questions like "Why is this database timeout 30 seconds?" with complete confidence, showing you exactly which files, transformations, and business rules contributed to that final value. More importantly, you'll understand how to apply these archaeological principles to any complex data processing pipeline in your organization.
@@ -266,6 +267,7 @@ But the real innovation is in how this system **adapts to different operational 
 The end-to-end demonstration shows how a developer would actually use this system to investigate a production configuration issue. The process is straightforward: point the system at your configuration files, ask your question, and get a comprehensive answer with complete supporting evidence.
 
 But notice what's happening behind the scenes. The system is:
+
 - Parsing multiple configuration formats
 - Building complete lineage graphs
 - Detecting and analyzing conflicts
@@ -324,7 +326,7 @@ This SDK represents a new category of platform engineering tool—one that provi
 The real test of any platform engineering innovation is its impact on day-to-day operations. Configuration archaeology addresses some of the most time-consuming and frustrating aspects of platform engineering:
 
 - **Debugging time reduction**: From hours of manual investigation to minutes of automated analysis
-- **Incident response improvement**: From guesswork to evidence-based problem solving  
+- **Incident response improvement**: From guesswork to evidence-based problem solving
 - **Compliance simplification**: From manual audit trail construction to automatic documentation
 - **Knowledge preservation**: From tribal knowledge to encoded organizational intelligence
 

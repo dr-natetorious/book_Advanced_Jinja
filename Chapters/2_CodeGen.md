@@ -1,6 +1,6 @@
 # Chapter 1: Self-Modifying Code Generation Pipelines
 
-*Building a FastAPI service generator that evolves based on usage patterns*
+_Building a FastAPI service generator that evolves based on usage patterns_
 
 ## Introduction: The Dream of Self-Improving Code
 
@@ -15,6 +15,7 @@ Here's the thing that keeps platform engineers up at night: **traditional code g
 That's exactly what we're building in this chapter. Not just a FastAPI service generator, but a **self-modifying code generation pipeline** that observes, learns, and evolves. Think of it as code generation with a brain—and maybe a bit of attitude too.
 
 By the time we're done here, you'll have built a system that:
+
 - Analyzes production metrics to optimize future generations
 - Learns from developer feedback and common fixes
 - Automatically applies battle-tested patterns based on real-world usage
@@ -45,8 +46,9 @@ Here's what drives us crazy:
 Here's what really gets me fired up about this: **Every production service is a goldmine of operational intelligence**, and we're throwing it all away.
 
 Think about it. That service that's been running in production for six months? It knows things:
+
 - Which endpoints are slow and need caching
-- What resource allocations actually work in your environment  
+- What resource allocations actually work in your environment
 - Which error patterns crop up repeatedly
 - How your traffic actually behaves (spoiler: not like the load tests)
 
@@ -113,11 +115,11 @@ class GenerationMetrics:
 
 class TemplateEvolutionStrategy(Protocol):
     """Protocol for template evolution strategies."""
-    
+
     def analyze_metrics(self, metrics: List[GenerationMetrics]) -> Dict[str, Any]:
         """Analyze collected metrics to identify improvement opportunities."""
         ...
-    
+
     def generate_modifications(self, analysis: Dict[str, Any]) -> List[str]:
         """Generate template modification suggestions."""
         ...
@@ -136,22 +138,22 @@ Traditional templates are like those old flip phones—they do one thing, and th
 ```python
 class SelfAwareTemplate:
     """Template that maintains metadata about its own structure and usage."""
-    
+
     def __init__(self, template_content: str, metadata: Dict[str, Any] = None):
         self.content = template_content
         self.metadata = metadata or {}
         self.generation_history = []
         self.performance_data = {}
-        
+
         # Parse template structure for self-analysis
         self.env = Environment()
         self.ast = self.env.parse(template_content)
         self.variables = meta.find_undeclared_variables(self.ast)
-        
+
     def render_with_tracking(self, context: Dict[str, Any]) -> str:
         """Render template while tracking performance and usage patterns."""
         start_time = datetime.now()
-        
+
         # Enhance context with self-reflection capabilities
         enhanced_context = {
             **context,
@@ -160,10 +162,10 @@ class SelfAwareTemplate:
             'performance_history': self.performance_data,
             'modify_template': self._modify_template_hook
         }
-        
+
         template = Template(self.content)
         result = template.render(enhanced_context)
-        
+
         # Record generation metrics
         generation_time = (datetime.now() - start_time).total_seconds()
         self.generation_history.append({
@@ -172,9 +174,9 @@ class SelfAwareTemplate:
             'context_keys': list(context.keys()),
             'output_size': len(result)
         })
-        
+
         return result
-    
+
     def _modify_template_hook(self, modification_type: str, **kwargs):
         """Hook for templates to request their own modifications."""
         self.metadata.setdefault('modification_requests', []).append({
@@ -246,7 +248,7 @@ class {{ model_name }}(BaseModel):
     {% for field_name, field_type in model_fields.items() %}
     {{ field_name }}: {{ field_type }}
     {% endfor %}
-    
+
     {% if template_meta.enforce_validation and generation_count > 3 %}
     # Auto-injected validation based on error patterns
     @validator('*', pre=True)
@@ -270,21 +272,21 @@ async def {{ endpoint.function_name }}(
 ):
     """
     {{ endpoint.description }}
-    
+
     {% if template_meta.auto_documentation %}
     Auto-generated documentation:
     - Generated at: {{ generation_timestamp }}
     - Performance baseline: {{ performance_history.get(endpoint.path + '_avg_time', 'N/A') }}ms
     {% endif %}
     """
-    
+
     {% if endpoint.path in error_patterns %}
     # Auto-injected error handling based on production issues
     try:
     {% endif %}
-    
+
         {{ endpoint.implementation | indent(8) }}
-        
+
     {% if endpoint.path in error_patterns %}
     except Exception as e:
         # Template learned this endpoint is error-prone
@@ -303,7 +305,7 @@ async def health_check():
     {% endif %}
     """
     health_status = {"status": "healthy", "timestamp": datetime.utcnow()}
-    
+
     {% if generation_count > 2 %}
     # Database health check (auto-added after observing production issues)
     try:
@@ -314,7 +316,7 @@ async def health_check():
         health_status["database"] = "disconnected"
         health_status["status"] = "unhealthy"
     {% endif %}
-    
+
     return health_status
 
 # Template self-modification trigger
@@ -328,13 +330,14 @@ async def health_check():
 '''
 ```
 
-Holy cow, look at all the intelligence baked into this template! 
+Holy cow, look at all the intelligence baked into this template!
 
 > 🔥 **Hot Take**: This isn't just a template anymore—it's a **living document** that adapts based on operational reality.
 
 Notice how the template:
+
 - **Automatically adds profiling** for slow services
-- **Injects compression middleware** for high-traffic scenarios  
+- **Injects compression middleware** for high-traffic scenarios
 - **Evolves health checks** based on operational experience
 - **Adds error handling** for problematic endpoints
 - **Requests its own modifications** when certain conditions are met
@@ -355,7 +358,7 @@ from typing import List, Dict, Any
 
 class ASTTemplateModifier:
     """Modifies templates by analyzing and transforming generated code ASTs."""
-    
+
     def __init__(self):
         self.modification_strategies = {
             'add_caching': self._add_caching_decorator,
@@ -363,11 +366,11 @@ class ASTTemplateModifier:
             'add_error_handling': self._add_error_handling,
             'inject_monitoring': self._inject_monitoring_code
         }
-    
+
     def analyze_generated_code(self, code: str) -> Dict[str, Any]:
         """Analyze generated code to identify optimization opportunities."""
         tree = ast.parse(code)
-        
+
         analysis = {
             'function_count': len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
             'async_function_count': len([n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef)]),
@@ -376,9 +379,9 @@ class ASTTemplateModifier:
             'error_handling_coverage': self._analyze_error_handling(tree),
             'complexity_metrics': self._calculate_complexity(tree)
         }
-        
+
         return analysis
-    
+
     def _extract_decorators(self, tree: ast.AST) -> List[str]:
         """Extract all decorators used in the code."""
         decorators = []
@@ -390,12 +393,12 @@ class ASTTemplateModifier:
                     elif isinstance(decorator, ast.Attribute):
                         decorators.append(f"{decorator.value.id}.{decorator.attr}")
         return decorators
-    
+
     def _analyze_error_handling(self, tree: ast.AST) -> float:
         """Calculate the percentage of functions with error handling."""
         total_functions = 0
         functions_with_try_catch = 0
-        
+
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 total_functions += 1
@@ -404,30 +407,30 @@ class ASTTemplateModifier:
                     if isinstance(child, ast.Try):
                         functions_with_try_catch += 1
                         break
-        
+
         return functions_with_try_catch / total_functions if total_functions > 0 else 0
-    
+
     def modify_template_based_on_analysis(self, template: SelfAwareTemplate, analysis: Dict[str, Any]) -> str:
         """Modify template content based on code analysis."""
         modifications = []
-        
+
         # Add caching if many repeated operations detected
         if analysis['function_count'] > 10 and 'cache' not in analysis['decorator_usage']:
             modifications.append('add_caching')
-        
+
         # Add error handling if coverage is low
         if analysis['error_handling_coverage'] < 0.3:
             modifications.append('add_error_handling')
-        
+
         # Optimize imports if too many unused imports
         if len(analysis['import_statements']) > 15:
             modifications.append('optimize_imports')
-        
+
         modified_content = template.content
         for modification in modifications:
             if modification in self.modification_strategies:
                 modified_content = self.modification_strategies[modification](modified_content, analysis)
-        
+
         return modified_content
 ```
 
@@ -441,6 +444,7 @@ This is where the magic happens. Our system can:
 > 🎯 **Key Insight**: We're not just generating code anymore—we're generating code that analyzes itself and requests improvements. It's like having a code reviewer that works 24/7 and never gets tired of pointing out the same issues.
 
 Think about the implications here:
+
 - Templates that detect when services need more robust error handling
 - Automatic caching injection for services with many functions
 - Import optimization for cleaner, faster-loading code
@@ -457,6 +461,7 @@ Traditional approach? Cross your fingers and hope for the best. Our approach? **
 ### The Compatibility Conundrum
 
 Picture this scenario: You've got 50 services running template v1.0. Your template evolves to v2.0 with better security headers. Now what? Do you:
+
 - A) Leave the old services vulnerable?
 - B) Mass-update everything and pray nothing breaks?
 - C) Build an intelligent migration system?
@@ -482,43 +487,43 @@ class TemplateVersion:
     compatibility_level: CompatibilityLevel
     migration_required: bool = False
     deprecated_features: Set[str] = None
-    
+
     def __post_init__(self):
         if self.deprecated_features is None:
             self.deprecated_features = set()
-    
+
     @property
     def version_string(self) -> str:
         return f"{self.major}.{self.minor}.{self.patch}"
 
 class VersionAwareGenerator:
     """Handles version-aware code generation with backwards compatibility."""
-    
+
     def __init__(self):
         self.version_registry = {}
         self.migration_strategies = {}
         self.compatibility_matrix = {}
-    
+
     def register_template_version(self, name: str, version: TemplateVersion, template_content: str):
         """Register a template version with migration capabilities."""
         if name not in self.version_registry:
             self.version_registry[name] = {}
-        
+
         self.version_registry[name][version.version_string] = {
             'version': version,
             'content': template_content,
             'features': self._extract_features(template_content)
         }
-    
-    def generate_with_compatibility(self, template_name: str, target_version: str, 
-                                  context: Dict[str, Any], 
+
+    def generate_with_compatibility(self, template_name: str, target_version: str,
+                                  context: Dict[str, Any],
                                   client_version: Optional[str] = None) -> str:
         """Generate code ensuring compatibility with client requirements."""
-        
+
         if client_version and self._requires_migration(template_name, client_version, target_version):
             # Generate migration-aware output
             return self._generate_with_migration(template_name, client_version, target_version, context)
-        
+
         # Standard generation
         template_data = self.version_registry[template_name][target_version]
         template = SelfAwareTemplate(template_data['content'], {
@@ -526,13 +531,13 @@ class VersionAwareGenerator:
             'compatibility_level': template_data['version'].compatibility_level.value,
             'client_version': client_version
         })
-        
+
         return template.render_with_tracking(context)
-    
-    def _generate_with_migration(self, template_name: str, from_version: str, 
+
+    def _generate_with_migration(self, template_name: str, from_version: str,
                                to_version: str, context: Dict[str, Any]) -> str:
         """Generate code with migration annotations and compatibility shims."""
-        
+
         # Enhanced template with migration awareness
         migration_template = f'''
 # Generated with migration support from {from_version} to {to_version}
@@ -564,7 +569,7 @@ warnings.warn(
 # Migration utilities
 class CompatibilityLayer:
     """Provides backwards compatibility for older client versions."""
-    
+
     @staticmethod
     def legacy_response_format(data):
         """Convert new response format to legacy format if needed."""
@@ -573,20 +578,21 @@ class CompatibilityLayer:
             return {{"status": "success", "data": data}}
         return data
 '''
-        
+
         template = SelfAwareTemplate(migration_template, {
             'version': to_version,
             'client_version': from_version,
             'migration_active': True,
             'deprecated_features': self._get_deprecated_features(template_name, from_version, to_version)
         })
-        
+
         return template.render_with_tracking(context)
 ```
 
 > 💪 **Pro Move**: This system doesn't just manage versions—it **actively helps with migration**. It generates compatibility shims, deprecation warnings, and migration utilities automatically.
 
 The beauty of this approach:
+
 - **Old services keep working** with compatibility layers
 - **New services get the latest features** automatically
 - **Migration paths are generated** for you
@@ -609,7 +615,7 @@ from typing import Dict, Any, Generator
 
 class TemplatePerformanceProfiler:
     """Profiles template execution for optimization opportunities."""
-    
+
     def __init__(self):
         self.profile_data = {}
         self.performance_thresholds = {
@@ -617,36 +623,36 @@ class TemplatePerformanceProfiler:
             'memory_usage': 50 * 1024 * 1024,  # 50MB
             'template_size': 1024 * 1024  # 1MB
         }
-    
+
     @contextmanager
     def profile_template_execution(self, template_id: str) -> Generator[Dict[str, Any], None, None]:
         """Context manager for profiling template execution."""
         profiler = cProfile.Profile()
-        
+
         # Memory tracking
         import tracemalloc
         tracemalloc.start()
-        
+
         start_memory = tracemalloc.get_traced_memory()[0]
-        
+
         profiler.enable()
         performance_data = {'template_id': template_id}
-        
+
         try:
             yield performance_data
         finally:
             profiler.disable()
-            
+
             # Capture profiling data
             string_io = io.StringIO()
             stats = pstats.Stats(profiler, stream=string_io)
             stats.sort_stats('cumulative')
             stats.print_stats()
-            
+
             end_memory = tracemalloc.get_traced_memory()[0]
             memory_peak = tracemalloc.get_traced_memory()[1]
             tracemalloc.stop()
-            
+
             # Store performance metrics
             performance_data.update({
                 'profile_output': string_io.getvalue(),
@@ -654,36 +660,36 @@ class TemplatePerformanceProfiler:
                 'memory_peak': memory_peak,
                 'function_calls': stats.total_calls
             })
-            
+
             self.profile_data[template_id] = performance_data
-            
+
             # Check for performance issues
             self._analyze_performance_issues(template_id, performance_data)
-    
+
     def _analyze_performance_issues(self, template_id: str, performance_data: Dict[str, Any]):
         """Analyze performance data to identify optimization opportunities."""
         issues = []
-        
+
         if performance_data.get('memory_used', 0) > self.performance_thresholds['memory_usage']:
             issues.append({
                 'type': 'high_memory_usage',
                 'severity': 'warning',
                 'suggestion': 'Consider streaming template rendering or reducing context size'
             })
-        
+
         if performance_data.get('memory_peak', 0) > self.performance_thresholds['memory_usage'] * 2:
             issues.append({
                 'type': 'memory_spike',
                 'severity': 'critical',
                 'suggestion': 'Investigate memory leaks or optimize large data structures'
             })
-        
+
         if issues:
             performance_data['optimization_suggestions'] = issues
 
 class OptimizedTemplateEngine:
     """Template engine with built-in performance optimization."""
-    
+
     def __init__(self):
         self.profiler = TemplatePerformanceProfiler()
         self.cache = {}
@@ -693,48 +699,48 @@ class OptimizedTemplateEngine:
             'stream_large_outputs': True,
             'parallel_include_rendering': True
         }
-    
-    async def render_optimized(self, template: SelfAwareTemplate, 
+
+    async def render_optimized(self, template: SelfAwareTemplate,
                              context: Dict[str, Any]) -> str:
         """Render template with performance optimizations."""
-        
+
         template_id = f"{id(template)}_{hash(str(context))}"
-        
+
         # Check cache first
         if template_id in self.cache and self.optimization_strategies['cache_compiled_templates']:
             return self.cache[template_id]
-        
+
         with self.profiler.profile_template_execution(template_id) as perf_data:
             # Pre-render optimizations
             optimized_context = await self._optimize_context(context)
-            
+
             # Render with streaming for large outputs
             if self.optimization_strategies['stream_large_outputs']:
                 result = await self._stream_render(template, optimized_context)
             else:
                 result = template.render_with_tracking(optimized_context)
-            
+
             perf_data['render_time'] = perf_data.get('render_time', 0)
             perf_data['output_size'] = len(result)
-        
+
         # Cache result if beneficial
         if self._should_cache_result(template_id, perf_data):
             self.cache[template_id] = result
-        
+
         return result
-    
+
     async def _optimize_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Optimize context for better rendering performance."""
         optimized = context.copy()
-        
+
         # Convert large lists to generators where possible
         for key, value in context.items():
             if isinstance(value, list) and len(value) > 1000:
                 optimized[key] = (item for item in value)
-        
+
         return optimized
-    
-    async def _stream_render(self, template: SelfAwareTemplate, 
+
+    async def _stream_render(self, template: SelfAwareTemplate,
                            context: Dict[str, Any]) -> str:
         """Stream template rendering for large outputs."""
         # Implementation would use Jinja2's streaming capabilities
@@ -755,35 +761,35 @@ Alright, time to put it all together. All these components working in harmony to
 ```python
 class AutoEvolvingScaffoldingSystem:
     """Complete self-modifying code generation pipeline."""
-    
+
     def __init__(self):
         self.template_engine = OptimizedTemplateEngine()
         self.version_manager = VersionAwareGenerator()
         self.ast_modifier = ASTTemplateModifier()
         self.analytics_collector = AnalyticsCollector()
         self.evolution_engine = TemplateEvolutionEngine()
-        
+
         # Initialize base templates
         self._initialize_base_templates()
-    
+
     def _initialize_base_templates(self):
         """Set up initial template versions."""
         base_version = TemplateVersion(1, 0, 0, CompatibilityLevel.COMPATIBLE)
         self.version_manager.register_template_version(
-            "fastapi_service", 
-            base_version, 
+            "fastapi_service",
+            base_version,
             FASTAPI_BASE_TEMPLATE
         )
-    
-    async def generate_service(self, service_spec: Dict[str, Any], 
+
+    async def generate_service(self, service_spec: Dict[str, Any],
                              target_version: str = "1.0.0") -> str:
         """Generate a FastAPI service with evolutionary improvements."""
-        
+
         # Gather context from analytics
         historical_data = await self.analytics_collector.get_service_analytics(
             service_spec.get('service_type', 'default')
         )
-        
+
         # Enhance context with learned optimizations
         enhanced_context = {
             **service_spec,
@@ -792,79 +798,79 @@ class AutoEvolvingScaffoldingSystem:
             'usage_patterns': historical_data.get('usage', {}),
             'generation_timestamp': datetime.now().isoformat()
         }
-        
+
         # Generate code
         template_name = "fastapi_service"
         generated_code = self.version_manager.generate_with_compatibility(
             template_name, target_version, enhanced_context
         )
-        
+
         # Analyze generated code for immediate optimizations
         code_analysis = self.ast_modifier.analyze_generated_code(generated_code)
-        
+
         # Apply AST-based improvements
         if self._should_apply_ast_optimizations(code_analysis):
             template = self.version_manager.version_registry[template_name][target_version]
             optimized_template_content = self.ast_modifier.modify_template_based_on_analysis(
                 SelfAwareTemplate(template['content']), code_analysis
             )
-            
+
             # Re-generate with optimized template
             optimized_template = SelfAwareTemplate(optimized_template_content)
             generated_code = await self.template_engine.render_optimized(
                 optimized_template, enhanced_context
             )
-        
+
         # Record generation metrics for future evolution
         await self._record_generation_metrics(service_spec, generated_code, code_analysis)
-        
+
         return generated_code
-    
+
     async def evolve_templates(self):
         """Trigger template evolution based on collected analytics."""
-        
+
         # Collect analytics from all generated services
         all_metrics = await self.analytics_collector.get_all_metrics()
-        
+
         # Analyze for evolution opportunities
         evolution_suggestions = self.evolution_engine.analyze_for_evolution(all_metrics)
-        
+
         # Apply approved evolutions
         for suggestion in evolution_suggestions:
             if suggestion['confidence'] > 0.8:  # High confidence threshold
                 await self._apply_template_evolution(suggestion)
-    
+
     async def _apply_template_evolution(self, suggestion: Dict[str, Any]):
         """Apply an evolution suggestion to templates."""
-        
+
         template_name = suggestion['template_name']
         modification_type = suggestion['type']
-        
+
         # Get current template version
         current_versions = self.version_manager.version_registry[template_name]
         latest_version_string = max(current_versions.keys())
         latest_template = current_versions[latest_version_string]
-        
+
         # Create evolved version
         evolved_content = self._apply_evolution_modification(
             latest_template['content'], suggestion
         )
-        
+
         # Increment version
         new_version = self._increment_version(latest_template['version'], suggestion['impact'])
-        
+
         # Register evolved template
         self.version_manager.register_template_version(
             template_name, new_version, evolved_content
         )
-        
+
         print(f"Template {template_name} evolved to version {new_version.version_string}")
         print(f"Evolution: {suggestion['description']}")
 
 # Supporting classes for analytics and evolution
 class AnalyticsCollector:
     """Collects and analyzes usage patterns from generated services."""
-    
+
     async def get_service_analytics(self, service_type: str) -> Dict[str, Any]:
         """Get historical analytics for a service type."""
         # Implementation would connect to monitoring systems
@@ -873,7 +879,7 @@ class AnalyticsCollector:
             'common_errors': ['validation_error', 'timeout'],
             'usage': {'peak_requests_per_second': 1000}
         }
-    
+
     async def get_all_metrics(self) -> List[GenerationMetrics]:
         """Retrieve all collected metrics for evolution analysis."""
         # Implementation would query metrics database
@@ -881,11 +887,11 @@ class AnalyticsCollector:
 
 class TemplateEvolutionEngine:
     """Analyzes metrics to suggest template improvements."""
-    
+
     def analyze_for_evolution(self, metrics: List[GenerationMetrics]) -> List[Dict[str, Any]]:
         """Analyze metrics to identify evolution opportunities."""
         suggestions = []
-        
+
         # Example: If many services need the same optimization
         if self._detect_common_performance_issue(metrics):
             suggestions.append({
@@ -895,9 +901,9 @@ class TemplateEvolutionEngine:
                 'confidence': 0.9,
                 'impact': 'minor'
             })
-        
+
         return suggestions
-    
+
     def _detect_common_performance_issue(self, metrics: List[GenerationMetrics]) -> bool:
         """Detect if there's a common performance issue across services."""
         slow_services = [m for m in metrics if m.performance_metrics.get('avg_response_time', 0) > 0.5]
@@ -906,9 +912,9 @@ class TemplateEvolutionEngine:
 # Usage example
 async def main():
     """Demonstrate the auto-evolving scaffolding system."""
-    
+
     system = AutoEvolvingScaffoldingSystem()
-    
+
     # Generate a user service
     user_service_spec = {
         'service_name': 'UserService',
@@ -932,12 +938,12 @@ async def main():
             }
         ]
     }
-    
+
     # Generate the service
     generated_code = await system.generate_service(user_service_spec)
     print("Generated FastAPI service:")
     print(generated_code)
-    
+
     # Simulate template evolution (would normally run periodically)
     await system.evolve_templates()
 
@@ -948,6 +954,7 @@ if __name__ == "__main__":
 > 🎉 **Ta-da!** There it is—a complete auto-evolving scaffolding system that learns, adapts, and improves over time.
 
 Notice how this system brings together all our components:
+
 - **Self-aware templates** that track their own usage
 - **Version management** with backward compatibility
 - **AST analysis** for code quality optimization
@@ -967,16 +974,16 @@ Here's the thing about evolution—sometimes it goes down the wrong path. Dinosa
 ```python
 class TemplateRollbackManager:
     """Manages template rollbacks and safety checks."""
-    
+
     def __init__(self):
         self.rollback_history = {}
         self.safety_checks = []
         self.canary_deployments = {}
-    
+
     async def safe_deploy_template(self, template_name: str, new_version: TemplateVersion,
                                  template_content: str) -> bool:
         """Deploy template with safety checks and rollback capability."""
-        
+
         # Store current version for potential rollback
         current_version = self._get_current_version(template_name)
         self.rollback_history[template_name] = {
@@ -984,26 +991,26 @@ class TemplateRollbackManager:
             'rollback_timestamp': datetime.now(),
             'reason': 'safety_deployment'
         }
-        
+
         # Run pre-deployment safety checks
         safety_results = await self._run_safety_checks(template_content)
         if not all(check['passed'] for check in safety_results):
             await self._rollback_template(template_name)
             return False
-        
+
         # Deploy to canary environment first
         canary_success = await self._deploy_canary(template_name, new_version, template_content)
         if not canary_success:
             await self._rollback_template(template_name)
             return False
-        
+
         # Full deployment
         return await self._deploy_production(template_name, new_version, template_content)
-    
+
     async def _run_safety_checks(self, template_content: str) -> List[Dict[str, Any]]:
         """Run comprehensive safety checks on template content."""
         checks = []
-        
+
         # Security scan
         security_check = await self._security_scan(template_content)
         checks.append({
@@ -1011,7 +1018,7 @@ class TemplateRollbackManager:
             'passed': security_check['vulnerabilities'] == 0,
             'details': security_check
         })
-        
+
         # Performance regression test
         perf_check = await self._performance_regression_test(template_content)
         checks.append({
@@ -1019,7 +1026,7 @@ class TemplateRollbackManager:
             'passed': perf_check['regression_detected'] == False,
             'details': perf_check
         })
-        
+
         # Syntax and compilation check
         syntax_check = self._syntax_validation(template_content)
         checks.append({
@@ -1027,7 +1034,7 @@ class TemplateRollbackManager:
             'passed': syntax_check['valid'],
             'details': syntax_check
         })
-        
+
         return checks
 ```
 
@@ -1042,12 +1049,12 @@ How do you know if your templates are actually getting smarter? You measure it:
 ```python
 class EvolutionMetrics:
     """Tracks the success and impact of template evolution."""
-    
+
     def __init__(self):
         self.evolution_history = []
         self.success_metrics = {}
         self.impact_analysis = {}
-    
+
     def record_evolution_outcome(self, template_name: str, evolution_type: str,
                                outcome: Dict[str, Any]):
         """Record the outcome of a template evolution."""
@@ -1058,10 +1065,10 @@ class EvolutionMetrics:
             'outcome': outcome,
             'metrics': self._collect_post_evolution_metrics(template_name)
         }
-        
+
         self.evolution_history.append(record)
         self._update_success_rates(evolution_type, outcome)
-    
+
     def _collect_post_evolution_metrics(self, template_name: str) -> Dict[str, Any]:
         """Collect metrics after template evolution to measure impact."""
         return {
@@ -1070,17 +1077,17 @@ class EvolutionMetrics:
             'error_rate_change': self._calculate_error_rate_delta(template_name),
             'developer_satisfaction': self._get_developer_feedback(template_name)
         }
-    
+
     def get_evolution_recommendations(self) -> List[Dict[str, Any]]:
         """Generate recommendations based on evolution history."""
         recommendations = []
-        
+
         # Analyze successful patterns
         successful_evolutions = [
-            e for e in self.evolution_history 
+            e for e in self.evolution_history
             if e['outcome'].get('success', False)
         ]
-        
+
         if successful_evolutions:
             # Find patterns in successful evolutions
             common_patterns = self._identify_success_patterns(successful_evolutions)
@@ -1091,7 +1098,7 @@ class EvolutionMetrics:
                     'confidence': pattern['success_rate'],
                     'templates': pattern['applicable_templates']
                 })
-        
+
         return recommendations
 ```
 
@@ -1106,23 +1113,23 @@ Template evolution needs to play nice with your existing development workflows:
 ```python
 class CICDIntegration:
     """Integrates template evolution with CI/CD pipelines."""
-    
+
     def __init__(self, pipeline_config: Dict[str, Any]):
         self.pipeline_config = pipeline_config
         self.webhook_handlers = {}
         self.deployment_stages = ['test', 'staging', 'production']
-    
+
     async def handle_code_generation_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle code generation request from CI/CD pipeline."""
-        
+
         # Extract generation parameters
         service_spec = request['service_specification']
         target_environment = request.get('environment', 'development')
         pipeline_id = request.get('pipeline_id')
-        
+
         # Select appropriate template version based on environment
         template_version = self._select_template_version(target_environment)
-        
+
         # Generate code with pipeline-specific context
         pipeline_context = {
             **service_spec,
@@ -1131,19 +1138,19 @@ class CICDIntegration:
             'build_metadata': request.get('build_metadata', {}),
             'git_context': request.get('git_context', {})
         }
-        
+
         generated_code = await self.scaffolding_system.generate_service(
             pipeline_context, template_version
         )
-        
+
         # Create deployment artifacts
         artifacts = await self._create_deployment_artifacts(
             generated_code, pipeline_context
         )
-        
+
         # Trigger follow-up pipeline stages
         await self._trigger_downstream_stages(pipeline_id, artifacts)
-        
+
         return {
             'status': 'success',
             'generated_code': generated_code,
@@ -1151,10 +1158,10 @@ class CICDIntegration:
             'template_version': template_version,
             'next_stages': self._get_next_stages(target_environment)
         }
-    
+
     async def _create_deployment_artifacts(self, code: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Create additional deployment artifacts based on generated code."""
-        
+
         artifacts = {
             'source_code': code,
             'dockerfile': self._generate_dockerfile(context),
@@ -1162,7 +1169,7 @@ class CICDIntegration:
             'helm_chart': self._generate_helm_chart(context),
             'terraform_config': self._generate_terraform_config(context)
         }
-        
+
         # Add environment-specific configurations
         environment = context.get('target_environment')
         if environment in ['staging', 'production']:
@@ -1171,7 +1178,7 @@ class CICDIntegration:
                 'alerting_rules': self._generate_alerting_rules(context),
                 'security_policies': self._generate_security_policies(context)
             })
-        
+
         return artifacts
 ```
 
@@ -1184,81 +1191,81 @@ You wouldn't deploy code without testing it. Why would you deploy template chang
 ```python
 class TemplateTestFramework:
     """Comprehensive testing framework for template evolution."""
-    
+
     def __init__(self):
         self.test_suites = {}
         self.test_data_generators = {}
         self.validation_rules = []
-    
-    async def run_comprehensive_tests(self, template_name: str, 
+
+    async def run_comprehensive_tests(self, template_name: str,
                                     template_content: str) -> Dict[str, Any]:
         """Run comprehensive tests on a template."""
-        
+
         test_results = {
             'template_name': template_name,
             'test_timestamp': datetime.now(),
             'results': {}
         }
-        
+
         # Unit tests - test individual template components
         unit_results = await self._run_unit_tests(template_name, template_content)
         test_results['results']['unit_tests'] = unit_results
-        
+
         # Integration tests - test template with various contexts
         integration_results = await self._run_integration_tests(template_name, template_content)
         test_results['results']['integration_tests'] = integration_results
-        
+
         # Property-based tests - test template with generated inputs
         property_results = await self._run_property_tests(template_name, template_content)
         test_results['results']['property_tests'] = property_results
-        
+
         # Performance tests - benchmark template execution
         performance_results = await self._run_performance_tests(template_name, template_content)
         test_results['results']['performance_tests'] = performance_results
-        
+
         # Security tests - scan for vulnerabilities in generated code
         security_results = await self._run_security_tests(template_name, template_content)
         test_results['results']['security_tests'] = security_results
-        
+
         # Calculate overall score
         test_results['overall_score'] = self._calculate_test_score(test_results['results'])
         test_results['passed'] = test_results['overall_score'] >= 0.8
-        
+
         return test_results
-    
-    async def _run_property_tests(self, template_name: str, 
+
+    async def _run_property_tests(self, template_name: str,
                                 template_content: str) -> Dict[str, Any]:
         """Run property-based tests using generated test data."""
-        
+
         # Generate diverse test contexts
         test_contexts = self._generate_test_contexts(template_name, count=100)
-        
+
         results = {
             'total_contexts': len(test_contexts),
             'successful_generations': 0,
             'failures': [],
             'property_violations': []
         }
-        
+
         for i, context in enumerate(test_contexts):
             try:
                 template = SelfAwareTemplate(template_content)
                 generated_code = template.render_with_tracking(context)
-                
+
                 # Validate generated code properties
                 violations = self._check_code_properties(generated_code, context)
                 if violations:
                     results['property_violations'].extend(violations)
                 else:
                     results['successful_generations'] += 1
-                    
+
             except Exception as e:
                 results['failures'].append({
                     'context_index': i,
                     'error': str(e),
                     'context': context
                 })
-        
+
         results['success_rate'] = results['successful_generations'] / results['total_contexts']
         return results
 ```
@@ -1272,7 +1279,7 @@ Here's the cherry on top: **zero-downtime template evolution** using blue-green 
 ```python
 class BlueGreenTemplateDeployment:
     """Implements blue-green deployment strategy for template evolution."""
-    
+
     def __init__(self):
         self.active_environment = 'blue'  # or 'green'
         self.environments = {
@@ -1280,29 +1287,29 @@ class BlueGreenTemplateDeployment:
             'green': {}
         }
         self.traffic_router = TrafficRouter()
-    
-    async def deploy_template_evolution(self, template_name: str, 
+
+    async def deploy_template_evolution(self, template_name: str,
                                       new_version: TemplateVersion,
                                       template_content: str) -> bool:
         """Deploy template evolution using blue-green strategy."""
-        
+
         # Determine target environment (opposite of active)
         target_env = 'green' if self.active_environment == 'blue' else 'blue'
-        
+
         # Deploy to inactive environment
         await self._deploy_to_environment(
             target_env, template_name, new_version, template_content
         )
-        
+
         # Run smoke tests
         smoke_test_results = await self._run_smoke_tests(target_env, template_name)
         if not smoke_test_results['passed']:
             await self._cleanup_environment(target_env, template_name)
             return False
-        
+
         # Gradual traffic shift
         success = await self._gradual_traffic_shift(template_name, target_env)
-        
+
         if success:
             # Complete switchover
             self.active_environment = target_env
@@ -1314,23 +1321,23 @@ class BlueGreenTemplateDeployment:
             # Rollback
             await self._cleanup_environment(target_env, template_name)
             return False
-    
-    async def _gradual_traffic_shift(self, template_name: str, 
+
+    async def _gradual_traffic_shift(self, template_name: str,
                                    target_environment: str) -> bool:
         """Gradually shift traffic to new template version."""
-        
+
         traffic_percentages = [5, 10, 25, 50, 75, 100]
-        
+
         for percentage in traffic_percentages:
             # Route percentage of traffic to new environment
             await self.traffic_router.set_traffic_split(
-                template_name, 
+                template_name,
                 {self.active_environment: 100 - percentage, target_environment: percentage}
             )
-            
+
             # Monitor for issues
             await asyncio.sleep(300)  # Wait 5 minutes
-            
+
             health_check = await self._health_check(target_environment, template_name)
             if not health_check['healthy']:
                 # Rollback traffic
@@ -1339,7 +1346,7 @@ class BlueGreenTemplateDeployment:
                     {self.active_environment: 100, target_environment: 0}
                 )
                 return False
-        
+
         return True
 ```
 
@@ -1386,9 +1393,10 @@ Instead of copy-pasting the same fixes across hundreds of services, your **templ
 
 This chapter has laid the foundation for intelligent, adaptive code generation. But we're just getting started. In Chapter 2, we'll take these evolutionary principles and apply them to an even more complex challenge: **multi-language SDK generation**.
 
-Picture this: templates that generate SDKs for eight different programming languages, each optimized for its target ecosystem, all while maintaining consistency and learning from usage patterns across every language. 
+Picture this: templates that generate SDKs for eight different programming languages, each optimized for its target ecosystem, all while maintaining consistency and learning from usage patterns across every language.
 
 We're talking about:
+
 - Language-specific template hierarchies
 - Cross-language consistency enforcement
 - Polyglot performance optimization
@@ -1403,23 +1411,29 @@ If self-modifying FastAPI generation blew your mind, wait until you see template
 Here are some challenges to take this system to the next level:
 
 ### 🎯 Exercise 1: Template Introspection Engine
+
 Extend the `SelfAwareTemplate` class to detect unused variables, redundant logic, and template complexity metrics. Build a system that can suggest template simplifications automatically.
 
 ### 🧪 Exercise 2: Evolution Strategy Playground
+
 Implement multiple evolution strategies:
+
 - **Conservative**: Only apply changes with 95%+ confidence
-- **Aggressive**: Apply changes with 70%+ confidence  
+- **Aggressive**: Apply changes with 70%+ confidence
 - **Experimental**: Test controversial changes in isolation
 
 ### 🔬 Exercise 3: A/B Testing for Templates
+
 Build a system that can run A/B tests on template changes, measuring real-world impact before full rollout. Which template version actually produces better services?
 
 ### 🛡️ Exercise 4: Security Evolution Engine
+
 Create a specialized evolution engine that focuses on security improvements, automatically patching common vulnerabilities and applying security best practices.
 
 ### 📊 Exercise 5: Performance Regression Detection
+
 Build monitoring that detects when template changes introduce performance regressions in generated services, with automatic rollback triggers.
 
 The tools are in your hands. The patterns are established. Time to build something amazing.
 
-*Ready to make your templates as smart as your senior engineers? Let's keep evolving.*
+_Ready to make your templates as smart as your senior engineers? Let's keep evolving._

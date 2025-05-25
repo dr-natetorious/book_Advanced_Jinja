@@ -1,6 +1,6 @@
 # Chapter 2: Multi-Language Platform SDK Generation
 
-*Creating polyglot SDKs from OpenAPI specs with language-specific optimizations*
+_Creating polyglot SDKs from OpenAPI specs with language-specific optimizations_
 
 ## Introduction: The Tower of Babel Problem
 
@@ -25,6 +25,7 @@ Let's be real about what makes cross-language SDK generation so tricky. It's not
 ### The Semantic Gap
 
 Consider this simple API endpoint:
+
 ```python
 @app.get("/users/{user_id}")
 async def get_user(user_id: int) -> User:
@@ -38,6 +39,7 @@ Seems straightforward, right? But watch what happens when we try to represent th
 **SQL needs:** proper prepared statements with type-safe parameter binding
 
 Each language has its own expectations about:
+
 - Naming conventions (snake_case vs camelCase vs PascalCase)
 - Error handling patterns (exceptions vs Result types vs callbacks)
 - Async patterns (async/await vs Promises vs callbacks)
@@ -52,6 +54,7 @@ This is where most SDK generators fall flat on their face. They try to impose on
 Here's where it gets really interesting: You want your SDKs to feel native to each language, but you also want them to be **conceptually consistent** across languages. A user is a user, whether you're calling it from Python or JavaScript. But the Python version should feel Pythonic, and the JavaScript version should feel... well, JavaScript-y.
 
 Traditional approaches force you to choose:
+
 - **Consistent but alien**: All SDKs feel the same, but none feel native
 - **Native but inconsistent**: Each SDK feels natural but they're all different
 
@@ -92,7 +95,7 @@ class FieldType(Enum):
     DATETIME = "datetime"
     ARRAY = "array"
     OBJECT = "object"
-    
+
 class HttpMethod(Enum):
     GET = "GET"
     POST = "POST"
@@ -109,12 +112,12 @@ class Field:
     default: Any = None
     description: str = ""
     validation_rules: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_python_type(self) -> str:
         """Convert to Python type annotation."""
         type_map = {
             FieldType.STRING: "str",
-            FieldType.INTEGER: "int", 
+            FieldType.INTEGER: "int",
             FieldType.FLOAT: "float",
             FieldType.BOOLEAN: "bool",
             FieldType.DATETIME: "datetime",
@@ -123,13 +126,13 @@ class Field:
         }
         base_type = type_map[self.type]
         return f"Optional[{base_type}]" if not self.required else base_type
-    
+
     def to_js_type(self) -> str:
         """Convert to TypeScript/JavaScript type."""
         type_map = {
             FieldType.STRING: "string",
             FieldType.INTEGER: "number",
-            FieldType.FLOAT: "number", 
+            FieldType.FLOAT: "number",
             FieldType.BOOLEAN: "boolean",
             FieldType.DATETIME: "Date",
             FieldType.ARRAY: "any[]",
@@ -137,7 +140,7 @@ class Field:
         }
         base_type = type_map[self.type]
         return f"{base_type} | null" if not self.required else base_type
-    
+
     def to_sql_type(self) -> str:
         """Convert to SQL column type."""
         type_map = {
@@ -157,11 +160,11 @@ class Model:
     name: str
     fields: List[Field]
     description: str = ""
-    
+
     def get_field(self, name: str) -> Optional[Field]:
         """Get field by name."""
         return next((f for f in self.fields if f.name == name), None)
-    
+
     def primary_key_field(self) -> Optional[Field]:
         """Get the primary key field (assumes 'id' field)."""
         return self.get_field('id')
@@ -176,17 +179,17 @@ class Endpoint:
     parameters: List[Field] = field(default_factory=list)
     request_model: Optional[Model] = None
     response_model: Optional[Model] = None
-    
+
     def python_function_name(self) -> str:
         """Convert to Python function naming convention."""
         return self.name.lower().replace(' ', '_')
-    
+
     def js_function_name(self) -> str:
         """Convert to JavaScript function naming convention."""
         words = self.name.lower().split('_')
         return words[0] + ''.join(word.capitalize() for word in words[1:])
 
-@dataclass 
+@dataclass
 class APISpec:
     """Complete API specification."""
     name: str
@@ -194,7 +197,7 @@ class APISpec:
     models: List[Model]
     endpoints: List[Endpoint]
     base_url: str = ""
-    
+
     def get_model(self, name: str) -> Optional[Model]:
         """Get model by name."""
         return next((m for m in self.models if m.name == name), None)
@@ -219,24 +222,24 @@ Building on Chapter 1's template inheritance, we create specialized hierarchies 
 ```python
 class LanguageTemplateHierarchy:
     """Manages language-specific template inheritance."""
-    
+
     def __init__(self, language: str):
         self.language = language
         self.templates = {}
         self.base_templates = {}
         self._load_language_templates()
-    
+
     def _load_language_templates(self):
         """Load templates specific to this language."""
         template_dir = Path(f"templates/{self.language}")
-        
+
         # Load base templates first
         self.base_templates = {
             'model': self._load_template(template_dir / "base_model.j2"),
             'client': self._load_template(template_dir / "base_client.j2"),
             'test': self._load_template(template_dir / "base_test.j2")
         }
-        
+
         # Load specific templates
         self.templates = {
             'mvc_model': self._load_template(template_dir / "mvc_model.j2"),
@@ -249,7 +252,7 @@ This hierarchy system is where the rubber meets the road. Each language gets its
 
 ### Python Template Hierarchy: The Foundation
 
-Let's start with Python, since it's the foundation of our FastAPI service. The Python templates need to generate SQLModel classes, FastAPI clients, and pytest test cases. 
+Let's start with Python, since it's the foundation of our FastAPI service. The Python templates need to generate SQLModel classes, FastAPI clients, and pytest test cases.
 
 > 🐍 **Why Python First?**: Python is our API's native language, so it makes sense to start here and then translate outward to other languages.
 
@@ -269,27 +272,27 @@ import pytest
 {# SQLModel class generation #}
 class {{ model.name }}(SQLModel, table=True):
     """{{ model.description }}"""
-    
+
     {% for field in model.fields %}
     {{ field.name }}: {{ field.to_python_type() }}{% if field.name == 'id' %} = Field(primary_key=True){% elif field.default is not none %} = Field(default={{ field.default | repr }}){% elif not field.required %} = Field(default=None){% endif %}
     {% endfor %}
-    
+
     {% if template_meta.generate_factory_methods %}
     @classmethod
     def create(cls, **kwargs) -> "{{ model.name }}":
         """Factory method for creating instances."""
         return cls(**kwargs)
-    
-    @classmethod  
+
+    @classmethod
     def from_dict(cls, data: dict) -> "{{ model.name }}":
         """Create instance from dictionary."""
         return cls(**{k: v for k, v in data.items() if k in cls.__fields__})
     {% endif %}
-    
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {field: getattr(self, field) for field in self.__fields__}
-    
+
     {% if model.primary_key_field() %}
     def __str__(self) -> str:
         return f"{{ model.name }}(id={{ '{' }}self.{{ model.primary_key_field().name }}{{ '}' }})"
@@ -313,22 +316,22 @@ from datetime import datetime
 
 class {{ api_spec.name }}Client:
     """Auto-generated Python client for {{ api_spec.name }} API."""
-    
+
     def __init__(self, base_url: str = "{{ api_spec.base_url }}", timeout: float = 30.0):
         self.base_url = base_url.rstrip('/')
         self.client = httpx.AsyncClient(timeout=timeout)
-        
+
         {% if template_meta.performance_tracking %}
         # Performance tracking (inherited from Chapter 1 patterns)
         self._request_metrics = {}
         {% endif %}
-    
+
     async def __aenter__(self):
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.aclose()
-    
+
     {% for endpoint in api_spec.endpoints %}
     async def {{ endpoint.python_function_name() }}(
         self,
@@ -340,11 +343,11 @@ class {{ api_spec.name }}Client:
         {% endif %}
     ) -> {% if endpoint.response_model %}{{ endpoint.response_model.name }}{% else %}Dict[str, Any]{% endif %}:
         """{{ endpoint.description }}"""
-        
+
         {% if template_meta.performance_tracking %}
         start_time = datetime.now()
         {% endif %}
-        
+
         # Build URL with path parameters
         url = f"{self.base_url}{{ endpoint.path }}"
         {% for param in endpoint.parameters %}
@@ -352,13 +355,13 @@ class {{ api_spec.name }}Client:
         url = url.replace("{{ '{' }}{{ param.name }}{{ '}' }}", str({{ param.name }}))
         {% endif %}
         {% endfor %}
-        
+
         # Prepare request
         kwargs = {}
         {% if endpoint.method.value in ['POST', 'PUT', 'PATCH'] and endpoint.request_model %}
         kwargs['json'] = data.to_dict() if hasattr(data, 'to_dict') else data
         {% endif %}
-        
+
         # Query parameters
         params = {}
         {% for param in endpoint.parameters %}
@@ -369,15 +372,15 @@ class {{ api_spec.name }}Client:
         {% endfor %}
         if params:
             kwargs['params'] = params
-        
+
         # Make request
         response = await self.client.request(
-            "{{ endpoint.method.value }}", 
-            url, 
+            "{{ endpoint.method.value }}",
+            url,
             **kwargs
         )
         response.raise_for_status()
-        
+
         {% if template_meta.performance_tracking %}
         # Track performance metrics
         duration = (datetime.now() - start_time).total_seconds()
@@ -386,7 +389,7 @@ class {{ api_spec.name }}Client:
             'status_code': response.status_code
         }
         {% endif %}
-        
+
         {% if endpoint.response_model %}
         # Parse response
         data = response.json()
@@ -394,13 +397,13 @@ class {{ api_spec.name }}Client:
         {% else %}
         return response.json()
         {% endif %}
-    
+
     {% endfor %}
 ```
 
 > ⚡ **Performance Note**: See how we're carrying forward the performance tracking patterns from Chapter 1? The templates are learning from each other and building on previous insights.
 
-This client isn't just a wrapper around HTTP calls—it's a **sophisticated, async-first Python client** with proper context management, performance tracking, and type-safe response parsing. 
+This client isn't just a wrapper around HTTP calls—it's a **sophisticated, async-first Python client** with proper context management, performance tracking, and type-safe response parsing.
 
 And the test suite? We're generating comprehensive pytest test cases that actually test the behavior, not just the syntax:
 
@@ -421,13 +424,13 @@ from models import {{ model.name }}
 
 class Test{{ api_spec.name }}Client:
     """Test suite for {{ api_spec.name }} client."""
-    
+
     @pytest.fixture
     async def client(self):
         """Create test client."""
         async with {{ api_spec.name }}Client("http://test.example.com") as client:
             yield client
-    
+
     {% for model in api_spec.models %}
     @pytest.fixture
     def sample_{{ model.name.lower() }}(self) -> {{ model.name }}:
@@ -445,14 +448,14 @@ class Test{{ api_spec.name }}Client:
             {% endif %}
             {% endfor %}
         )
-    
+
     {% endfor %}
-    
+
     {% for endpoint in api_spec.endpoints %}
     @pytest.mark.asyncio
     async def test_{{ endpoint.python_function_name() }}(self, client):
         """Test {{ endpoint.name }} endpoint."""
-        
+
         # Mock response
         mock_response = AsyncMock(spec=Response)
         mock_response.status_code = 200
@@ -471,7 +474,7 @@ class Test{{ api_spec.name }}Client:
         {% else %}
         mock_response.json.return_value = {"status": "success"}
         {% endif %}
-        
+
         with patch.object(client.client, 'request', return_value=mock_response):
             result = await client.{{ endpoint.python_function_name() }}(
                 {% for param in endpoint.parameters %}
@@ -484,21 +487,21 @@ class Test{{ api_spec.name }}Client:
             }
             {% endif %}
         );
-        
+
         expect(global.fetch).toHaveBeenCalledWith(
             expect.stringContaining('{{ endpoint.path.replace('{', '').replace('}', '') }}'),
             expect.objectContaining({
                 method: '{{ endpoint.method.value }}'
             })
         );
-        
+
         {% if endpoint.response_model %}
         expect(result).toBeInstanceOf({{ endpoint.response_model.name }});
         {% else %}
         expect(result).toBeDefined();
         {% endif %}
     });
-    
+
     {% endfor %}
 });
 ```
@@ -525,13 +528,13 @@ CREATE TABLE IF NOT EXISTS {{ model.name.lower() }}s (
 
 -- Indexes for {{ model.name }}
 {% if model.primary_key_field() %}
-CREATE INDEX IF NOT EXISTS idx_{{ model.name.lower() }}_{{ model.primary_key_field().name }} 
+CREATE INDEX IF NOT EXISTS idx_{{ model.name.lower() }}_{{ model.primary_key_field().name }}
 ON {{ model.name.lower() }}s ({{ model.primary_key_field().name }});
 {% endif %}
 
 {% for field in model.fields %}
 {% if field.name != 'id' and field.required %}
-CREATE INDEX IF NOT EXISTS idx_{{ model.name.lower() }}_{{ field.name }} 
+CREATE INDEX IF NOT EXISTS idx_{{ model.name.lower() }}_{{ field.name }}
 ON {{ model.name.lower() }}s ({{ field.name }});
 {% endif %}
 {% endfor %}
@@ -553,20 +556,20 @@ The query templates are where SQL really shows its personality:
 
 -- Get {{ model.name }} by ID
 -- get_{{ model.name.lower() }}_by_id
-SELECT 
+SELECT
     {% for field in model.fields %}
     {{ field.name }}{% if not loop.last %},{% endif %}
     {% endfor %}
-FROM {{ model.name.lower() }}s 
+FROM {{ model.name.lower() }}s
 WHERE id = ?;
 
 -- Get all {{ model.name }}s
 -- get_all_{{ model.name.lower() }}s
-SELECT 
+SELECT
     {% for field in model.fields %}
     {{ field.name }}{% if not loop.last %},{% endif %}
     {% endfor %}
-FROM {{ model.name.lower() }}s 
+FROM {{ model.name.lower() }}s
 ORDER BY {% if model.primary_key_field() %}{{ model.primary_key_field().name }}{% else %}{{ model.fields[0].name }}{% endif %};
 
 -- Create {{ model.name }}
@@ -587,8 +590,8 @@ INSERT INTO {{ model.name.lower() }}s (
 
 -- Update {{ model.name }}
 -- update_{{ model.name.lower() }}
-UPDATE {{ model.name.lower() }}s 
-SET 
+UPDATE {{ model.name.lower() }}s
+SET
     {% for field in model.fields %}
     {% if field.name != 'id' %}
     {{ field.name }} = ?{% if not loop.last %},{% endif %}
@@ -598,7 +601,7 @@ WHERE id = ?;
 
 -- Delete {{ model.name }}
 -- delete_{{ model.name.lower() }}
-DELETE FROM {{ model.name.lower() }}s 
+DELETE FROM {{ model.name.lower() }}s
 WHERE id = ?;
 
 {% endfor %}
@@ -632,34 +635,34 @@ class TemplateDependency:
     target_template: str
     dependency_type: str  # 'import', 'reference', 'extend'
     language: str
-    
+
 class CrossLanguageDependencyManager:
     """Manages dependencies across different language templates."""
-    
+
     def __init__(self):
         self.dependency_graph = nx.DiGraph()
         self.language_adapters = {}
         self.semantic_mappings = {}
-    
+
     def register_language_adapter(self, language: str, adapter: 'LanguageAdapter'):
         """Register a language-specific adapter."""
         self.language_adapters[language] = adapter
-    
+
     def add_semantic_mapping(self, semantic_id: str, language_mappings: Dict[str, str]):
         """Map semantic concepts to language-specific implementations."""
         self.semantic_mappings[semantic_id] = language_mappings
-    
+
     def analyze_dependencies(self, api_spec: APISpec) -> Dict[str, List[TemplateDependency]]:
         """Analyze semantic dependencies and generate language-specific deps."""
         dependencies = {}
-        
+
         for language in self.language_adapters:
             lang_deps = []
-            
+
             # Model dependencies
             for model in api_spec.models:
                 model_template = f"{language}/model_{model.name.lower()}"
-                
+
                 # Check for field type dependencies
                 for field in model.fields:
                     if field.type == FieldType.OBJECT:
@@ -673,11 +676,11 @@ class CrossLanguageDependencyManager:
                                 language=language
                             )
                             lang_deps.append(dep)
-            
+
             # Client dependencies
             for endpoint in api_spec.endpoints:
                 client_template = f"{language}/client"
-                
+
                 if endpoint.request_model:
                     dep = TemplateDependency(
                         source_template=client_template,
@@ -686,7 +689,7 @@ class CrossLanguageDependencyManager:
                         language=language
                     )
                     lang_deps.append(dep)
-                
+
                 if endpoint.response_model:
                     dep = TemplateDependency(
                         source_template=client_template,
@@ -695,32 +698,32 @@ class CrossLanguageDependencyManager:
                         language=language
                     )
                     lang_deps.append(dep)
-            
+
             dependencies[language] = lang_deps
-        
+
         return dependencies
-    
+
     def generate_dependency_order(self, language: str, dependencies: List[TemplateDependency]) -> List[str]:
         """Generate correct compilation order for templates."""
         # Build dependency graph for this language
         lang_graph = nx.DiGraph()
-        
+
         for dep in dependencies:
             lang_graph.add_edge(dep.target_template, dep.source_template)
-        
+
         # Return topological sort (dependencies first)
         try:
             return list(nx.topological_sort(lang_graph))
         except nx.NetworkXError:
             # Handle circular dependencies gracefully
             return self._handle_circular_dependencies(lang_graph)
-    
+
     def _find_referenced_model(self, field: Field, api_spec: APISpec) -> Optional[Model]:
         """Find model referenced by a field."""
         # This would contain logic to parse field validation rules
         # and identify model references
         return None
-    
+
     def _handle_circular_dependencies(self, graph: nx.DiGraph) -> List[str]:
         """Handle circular dependencies through forward declarations."""
         # For circular deps, generate forward declarations
@@ -729,21 +732,21 @@ class CrossLanguageDependencyManager:
 
 class LanguageAdapter:
     """Base class for language-specific adaptations."""
-    
+
     def __init__(self, language: str):
         self.language = language
         self.naming_conventions = {}
         self.type_mappings = {}
         self.import_patterns = {}
-    
+
     def adapt_naming(self, name: str, context: str) -> str:
         """Adapt names to language conventions."""
         raise NotImplementedError
-    
+
     def generate_imports(self, dependencies: List[TemplateDependency]) -> List[str]:
         """Generate language-specific import statements."""
         raise NotImplementedError
-    
+
     def handle_type_conflicts(self, types: List[str]) -> Dict[str, str]:
         """Handle type name conflicts across languages."""
         raise NotImplementedError
@@ -758,7 +761,7 @@ Each language gets its own adapter that understands the cultural nuances of that
 ```python
 class PythonAdapter(LanguageAdapter):
     """Python-specific language adapter."""
-    
+
     def __init__(self):
         super().__init__('python')
         self.naming_conventions = {
@@ -767,7 +770,7 @@ class PythonAdapter(LanguageAdapter):
             'variable': 'snake_case',
             'constant': 'SCREAMING_SNAKE_CASE'
         }
-    
+
     def adapt_naming(self, name: str, context: str) -> str:
         """Convert names to Python conventions."""
         if context == 'class':
@@ -777,7 +780,7 @@ class PythonAdapter(LanguageAdapter):
         elif context == 'constant':
             return self._to_screaming_snake_case(name)
         return name
-    
+
     def generate_imports(self, dependencies: List[TemplateDependency]) -> List[str]:
         """Generate Python import statements."""
         imports = []
@@ -786,19 +789,19 @@ class PythonAdapter(LanguageAdapter):
                 module_name = dep.target_template.replace('python/', '').replace('_', '.')
                 imports.append(f"from {module_name} import *")
         return imports
-    
+
     def _to_pascal_case(self, name: str) -> str:
         return ''.join(word.capitalize() for word in name.split('_'))
-    
+
     def _to_snake_case(self, name: str) -> str:
         return name.lower().replace(' ', '_')
-    
+
     def _to_screaming_snake_case(self, name: str) -> str:
         return name.upper().replace(' ', '_')
 
 class JavaScriptAdapter(LanguageAdapter):
     """JavaScript-specific language adapter."""
-    
+
     def __init__(self):
         super().__init__('javascript')
         self.naming_conventions = {
@@ -807,7 +810,7 @@ class JavaScriptAdapter(LanguageAdapter):
             'variable': 'camelCase',
             'constant': 'SCREAMING_SNAKE_CASE'
         }
-    
+
     def adapt_naming(self, name: str, context: str) -> str:
         """Convert names to JavaScript conventions."""
         if context == 'class':
@@ -817,7 +820,7 @@ class JavaScriptAdapter(LanguageAdapter):
         elif context == 'constant':
             return self._to_screaming_snake_case(name)
         return name
-    
+
     def generate_imports(self, dependencies: List[TemplateDependency]) -> List[str]:
         """Generate JavaScript import statements."""
         imports = []
@@ -826,14 +829,14 @@ class JavaScriptAdapter(LanguageAdapter):
                 module_name = dep.target_template.replace('javascript/', '')
                 imports.append(f"import {{ {module_name} }} from './{module_name}';")
         return imports
-    
+
     def _to_camel_case(self, name: str) -> str:
         words = name.split('_')
         return words[0].lower() + ''.join(word.capitalize() for word in words[1:])
-    
+
     def _to_pascal_case(self, name: str) -> str:
         return ''.join(word.capitalize() for word in name.split('_'))
-    
+
     def _to_screaming_snake_case(self, name: str) -> str:
         return name.upper().replace(' ', '_')
 ```
@@ -862,20 +865,20 @@ T = TypeVar('T')
 
 class TypeSafetyEngine:
     """Provides compile-time type checking across languages."""
-    
+
     def __init__(self):
         self.type_checkers = {}
         self.compatibility_matrix = {}
         self.duck_type_validators = {}
-    
+
     def register_type_checker(self, language: str, checker: 'TypeChecker'):
         """Register language-specific type checker."""
         self.type_checkers[language] = checker
-    
+
     def validate_cross_language_compatibility(self, api_spec: APISpec) -> List[str]:
         """Validate that types are compatible across all target languages."""
         compatibility_issues = []
-        
+
         for model in api_spec.models:
             for field in model.fields:
                 # Check if field type can be represented in all target languages
@@ -886,39 +889,39 @@ class TypeSafetyEngine:
                             f"Field {model.name}.{field.name} type {field.type} "
                             f"cannot be represented in {language}"
                         )
-        
+
         return compatibility_issues
-    
-    def validate_duck_typing_compatibility(self, source_model: Model, 
+
+    def validate_duck_typing_compatibility(self, source_model: Model,
                                          target_model: Model) -> bool:
         """Check if source model can duck-type as target model."""
         # Check if source has all required fields of target
         target_required_fields = {f.name: f.type for f in target_model.fields if f.required}
         source_fields = {f.name: f.type for f in source_model.fields}
-        
+
         for field_name, field_type in target_required_fields.items():
             if field_name not in source_fields:
                 return False
             if not self._types_compatible(source_fields[field_name], field_type):
                 return False
-        
+
         return True
-    
+
     def _types_compatible(self, source_type: FieldType, target_type: FieldType) -> bool:
         """Check if types are compatible for duck typing."""
         # Direct match
         if source_type == target_type:
             return True
-        
+
         # Compatible numeric types
         if source_type in [FieldType.INTEGER, FieldType.FLOAT] and \
            target_type in [FieldType.INTEGER, FieldType.FLOAT]:
             return True
-        
+
         # String-compatible types
         if source_type == FieldType.STRING and target_type == FieldType.DATETIME:
             return True  # Strings can be parsed as datetime
-        
+
         return False
 ```
 
@@ -933,12 +936,12 @@ Each language gets its own type checker that understands the specific constraint
 ```python
 class TypeChecker(ABC):
     """Abstract base for language-specific type checkers."""
-    
+
     @abstractmethod
     def can_represent_type(self, field_type: FieldType) -> bool:
         """Check if language can represent this field type."""
         pass
-    
+
     @abstractmethod
     def validate_generated_code(self, code: str) -> List[str]:
         """Validate generated code for type safety."""
@@ -946,40 +949,40 @@ class TypeChecker(ABC):
 
 class PythonTypeChecker(TypeChecker):
     """Python-specific type checker using mypy-like analysis."""
-    
+
     def can_represent_type(self, field_type: FieldType) -> bool:
         """Python can represent all our field types."""
         return True  # Python is very flexible
-    
+
     def validate_generated_code(self, code: str) -> List[str]:
         """Validate Python code using AST analysis."""
         issues = []
-        
+
         try:
             tree = ast.parse(code)
-            
+
             # Check for potential type issues
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
                     # Check function annotations
                     if not node.returns:
                         issues.append(f"Function {node.name} missing return type annotation")
-                
+
                 elif isinstance(node, ast.Assign):
                     # Check for untyped assignments that might cause issues
                     if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                         var_name = node.targets[0].id
                         if var_name.startswith('_') and not hasattr(node.value, 'annotation'):
                             issues.append(f"Private variable {var_name} should be type annotated")
-        
+
         except SyntaxError as e:
             issues.append(f"Syntax error: {e}")
-        
+
         return issues
 
 class JavaScriptTypeChecker(TypeChecker):
     """JavaScript-specific type checker."""
-    
+
     def can_represent_type(self, field_type: FieldType) -> bool:
         """Check JavaScript type compatibility."""
         # JavaScript has some limitations
@@ -987,27 +990,27 @@ class JavaScriptTypeChecker(TypeChecker):
             # JavaScript only has Number, not separate int/float
             return True
         return True  # JavaScript is also very flexible
-    
+
     def validate_generated_code(self, code: str) -> List[str]:
         """Validate JavaScript code (simplified)."""
         issues = []
-        
+
         # Basic syntax checks
         if 'var ' in code:
             issues.append("Use 'const' or 'let' instead of 'var'")
-        
+
         if '== ' in code or ' ==' in code:
             issues.append("Use strict equality (===) instead of loose equality (==)")
-        
+
         # Check for common async/await issues
         if 'await ' in code and 'async ' not in code:
             issues.append("Using 'await' without 'async' function")
-        
+
         return issues
 
 class SQLTypeChecker(TypeChecker):
     """SQL-specific type checker."""
-    
+
     def can_represent_type(self, field_type: FieldType) -> bool:
         """Check SQL type compatibility."""
         # SQL has more limitations
@@ -1016,19 +1019,19 @@ class SQLTypeChecker(TypeChecker):
         if field_type == FieldType.OBJECT:
             return False  # Standard SQL doesn't support objects
         return True
-    
+
     def validate_generated_code(self, code: str) -> List[str]:
         """Validate SQL code."""
         issues = []
-        
+
         # Check for SQL injection vulnerabilities
         if "'" in code and '?' not in code:
             issues.append("Potential SQL injection - use parameterized queries")
-        
+
         # Check for missing indexes
         if 'SELECT' in code.upper() and 'WHERE' in code.upper() and 'INDEX' not in code.upper():
             issues.append("Consider adding indexes for WHERE clauses")
-        
+
         return issues
 ```
 
@@ -1041,35 +1044,35 @@ For duck typing to work safely, we need runtime validation that can catch type m
 ```python
 class RuntimeTypeValidator:
     """Provides runtime type validation for duck typing."""
-    
+
     def __init__(self):
         self.validation_rules = {}
         self.type_coercers = {}
-    
+
     def register_validation_rule(self, field_type: FieldType, validator: callable):
         """Register a validation rule for a field type."""
         self.validation_rules[field_type] = validator
-    
+
     def register_type_coercer(self, from_type: FieldType, to_type: FieldType, coercer: callable):
         """Register a type coercion function."""
         self.type_coercers[(from_type, to_type)] = coercer
-    
+
     def validate_value(self, value: Any, expected_type: FieldType) -> bool:
         """Validate that a value matches the expected type."""
         if expected_type in self.validation_rules:
             return self.validation_rules[expected_type](value)
-        
+
         # Default validation
         return self._default_validate(value, expected_type)
-    
+
     def coerce_value(self, value: Any, from_type: FieldType, to_type: FieldType) -> Any:
         """Coerce a value from one type to another."""
         if (from_type, to_type) in self.type_coercers:
             return self.type_coercers[(from_type, to_type)](value)
-        
+
         # Default coercion
         return self._default_coerce(value, to_type)
-    
+
     def _default_validate(self, value: Any, expected_type: FieldType) -> bool:
         """Default validation logic."""
         type_validators = {
@@ -1081,10 +1084,10 @@ class RuntimeTypeValidator:
             FieldType.ARRAY: lambda v: hasattr(v, '__iter__') and not isinstance(v, str),
             FieldType.OBJECT: lambda v: hasattr(v, '__getitem__') or hasattr(v, '__dict__')
         }
-        
+
         validator = type_validators.get(expected_type, lambda v: True)
         return validator(value)
-    
+
     def _default_coerce(self, value: Any, to_type: FieldType) -> Any:
         """Default coercion logic."""
         if to_type == FieldType.STRING:
@@ -1097,7 +1100,7 @@ class RuntimeTypeValidator:
             if isinstance(value, str):
                 return value.lower() in ['true', '1', 'yes', 'on']
             return bool(value)
-        
+
         return value
 ```
 
@@ -1112,85 +1115,85 @@ This runtime validator is like having a safety net that catches type mismatches 
 ```python
 class PolyglotSDKFactory:
     """Complete multi-language SDK generation system."""
-    
+
     def __init__(self):
         # Core components from previous sections
         self.dependency_manager = CrossLanguageDependencyManager()
         self.type_safety_engine = TypeSafetyEngine()
         self.runtime_validator = RuntimeTypeValidator()
-        
+
         # Language-specific components
         self.language_hierarchies = {}
         self.output_managers = {}
-        
+
         # Initialize language support
         self._initialize_language_support()
-    
+
     def _initialize_language_support(self):
         """Initialize supported languages and their components."""
         # Python support
         python_hierarchy = LanguageTemplateHierarchy('python')
         python_adapter = PythonAdapter()
         python_type_checker = PythonTypeChecker()
-        
+
         self.language_hierarchies['python'] = python_hierarchy
         self.dependency_manager.register_language_adapter('python', python_adapter)
         self.type_safety_engine.register_type_checker('python', python_type_checker)
-        
+
         # JavaScript support
         js_hierarchy = LanguageTemplateHierarchy('javascript')
         js_adapter = JavaScriptAdapter()
         js_type_checker = JavaScriptTypeChecker()
-        
+
         self.language_hierarchies['javascript'] = js_hierarchy
         self.dependency_manager.register_language_adapter('javascript', js_adapter)
         self.type_safety_engine.register_type_checker('javascript', js_type_checker)
-        
+
         # SQL support
         sql_hierarchy = LanguageTemplateHierarchy('sql')
         sql_type_checker = SQLTypeChecker()
-        
+
         self.language_hierarchies['sql'] = sql_hierarchy
         self.type_safety_engine.register_type_checker('sql', sql_type_checker)
-    
-    async def generate_polyglot_sdk(self, api_spec: APISpec, 
+
+    async def generate_polyglot_sdk(self, api_spec: APISpec,
                                   target_languages: List[str] = None) -> Dict[str, Dict[str, str]]:
         """Generate SDKs for multiple languages from a single API spec."""
-        
+
         if target_languages is None:
             target_languages = ['python', 'javascript', 'sql']
-        
+
         # Step 1: Validate cross-language compatibility
         compatibility_issues = self.type_safety_engine.validate_cross_language_compatibility(api_spec)
         if compatibility_issues:
             raise ValueError(f"Cross-language compatibility issues: {compatibility_issues}")
-        
+
         # Step 2: Analyze dependencies
         dependencies = self.dependency_manager.analyze_dependencies(api_spec)
-        
+
         # Step 3: Generate code for each language
         generated_code = {}
-        
+
         for language in target_languages:
             print(f"Generating {language} SDK...")
-            
+
             # Get dependency order for this language
             lang_deps = dependencies.get(language, [])
             generation_order = self.dependency_manager.generate_dependency_order(language, lang_deps)
-            
+
             # Generate code files
             lang_code = await self._generate_language_code(api_spec, language, generation_order)
-            
+
             # Validate generated code
             validation_issues = await self._validate_generated_code(language, lang_code)
             if validation_issues:
                 print(f"Warning: {language} validation issues: {validation_issues}")
-            
+
             generated_code[language] = lang_code
-        
+
         # Step 4: Generate cross-language integration tests
         integration_tests = await self._generate_integration_tests(api_spec, generated_code)
-        
+
         return {
             **generated_code,
             'integration_tests': integration_tests
@@ -1204,14 +1207,14 @@ class PolyglotSDKFactory:
 Here's where the rubber really meets the road. For each language, we generate a complete, production-ready SDK:
 
 ```python
-    async def _generate_language_code(self, api_spec: APISpec, language: str, 
+    async def _generate_language_code(self, api_spec: APISpec, language: str,
                                     generation_order: List[str]) -> Dict[str, str]:
         """Generate code for a specific language."""
-        
+
         hierarchy = self.language_hierarchies[language]
         adapter = self.dependency_manager.language_adapters[language]
         code_files = {}
-        
+
         # Enhanced context with cross-language awareness
         context = {
             'api_spec': api_spec,
@@ -1225,13 +1228,13 @@ Here's where the rubber really meets the road. For each language, we generate a 
                 'enforce_validation': True
             }
         }
-        
+
         if language == 'python':
             # Generate Python files
             code_files['models.py'] = hierarchy.templates['mvc_model'].render(context)
             code_files['client.py'] = hierarchy.templates['api_client'].render(context)
             code_files['test_client.py'] = hierarchy.templates['test_suite'].render(context)
-            
+
             # Generate FastAPI main file
             main_template = '''
 from fastapi import FastAPI, HTTPException, Depends
@@ -1267,13 +1270,13 @@ async def {{ endpoint.python_function_name() }}(
                 {% endif %}
                 {% endfor %}
             )
-            
+
             {% if endpoint.response_model %}
             assert isinstance(result, {{ endpoint.response_model.name }})
             {% else %}
             assert result is not None
             {% endif %}
-    
+
     {% endfor %}
 ```
 
@@ -1301,11 +1304,11 @@ class {{ model.name }} {
         {% for field in model.fields %}
         this.{{ field.name }} = data.{{ field.name }}{% if field.default is not none %} ?? {{ field.default | tojson }}{% elif not field.required %} ?? null{% endif %};
         {% endfor %}
-        
+
         // Validate required fields
         this._validate();
     }
-    
+
     _validate() {
         {% for field in model.fields %}
         {% if field.required %}
@@ -1315,7 +1318,7 @@ class {{ model.name }} {
         {% endif %}
         {% endfor %}
     }
-    
+
     /**
      * Convert to plain object
      */
@@ -1326,14 +1329,14 @@ class {{ model.name }} {
             {% endfor %}
         };
     }
-    
+
     /**
      * Create instance from plain object
      */
     static fromJSON(data) {
         return new {{ model.name }}(data);
     }
-    
+
     {% if model.primary_key_field() %}
     toString() {
         return `{{ model.name }}(id=${this.{{ model.primary_key_field().name }}})`;
@@ -1362,23 +1365,23 @@ class {{ api_spec.name }}Client {
     constructor(baseUrl = '{{ api_spec.base_url }}', options = {}) {
         this.baseUrl = baseUrl.replace(/\/$/, '');
         this.timeout = options.timeout || 30000;
-        
+
         {% if template_meta.performance_tracking %}
         // Performance tracking
         this._requestMetrics = new Map();
         {% endif %}
     }
-    
+
     /**
      * Make HTTP request with error handling
      */
     async _request(method, path, options = {}) {
         const url = `${this.baseUrl}${path}`;
-        
+
         {% if template_meta.performance_tracking %}
         const startTime = Date.now();
         {% endif %}
-        
+
         const config = {
             method,
             headers: {
@@ -1387,18 +1390,18 @@ class {{ api_spec.name }}Client {
             },
             ...options
         };
-        
+
         if (config.body && typeof config.body === 'object') {
             config.body = JSON.stringify(config.body);
         }
-        
+
         try {
             const response = await fetch(url, config);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
+
             {% if template_meta.performance_tracking %}
             // Track performance
             const duration = Date.now() - startTime;
@@ -1407,19 +1410,19 @@ class {{ api_spec.name }}Client {
                 status: response.status
             });
             {% endif %}
-            
+
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 return await response.json();
             }
-            
+
             return await response.text();
-            
+
         } catch (error) {
             throw new Error(`Request failed: ${error.message}`);
         }
     }
-    
+
     {% for endpoint in api_spec.endpoints %}
     /**
      * {{ endpoint.description }}
@@ -1442,7 +1445,7 @@ class {{ api_spec.name }}Client {
         }
         {% endif %}
         {% endfor %}
-        
+
         // Query parameters
         const queryParams = new URLSearchParams();
         {% for param in endpoint.parameters %}
@@ -1452,11 +1455,11 @@ class {{ api_spec.name }}Client {
         }
         {% endif %}
         {% endfor %}
-        
+
         if (queryParams.toString()) {
             path += `?${queryParams.toString()}`;
         }
-        
+
         // Request options
         const requestOptions = { ...options };
         {% if endpoint.method.value in ['POST', 'PUT', 'PATCH'] and endpoint.request_model %}
@@ -1464,9 +1467,9 @@ class {{ api_spec.name }}Client {
             requestOptions.body = data instanceof {{ endpoint.request_model.name }} ? data.toJSON() : data;
         }
         {% endif %}
-        
+
         const result = await this._request('{{ endpoint.method.value }}', path, requestOptions);
-        
+
         {% if endpoint.response_model %}
         // Parse response into model
         if (Array.isArray(result)) {
@@ -1478,7 +1481,7 @@ class {{ api_spec.name }}Client {
         return result;
         {% endif %}
     }
-    
+
     {% endfor %}
 }
 ```
@@ -1489,7 +1492,7 @@ This isn't Python translated to JavaScript—it's **native JavaScript** generate
 
 The test suite follows suit with Jest-style testing:
 
-```jinja2
+````jinja2
 {# templates/javascript/test_suite.j2 #}
 /**
  * JavaScript test suite template
@@ -1510,14 +1513,14 @@ describe('{{ model.name }}', () => {
             {% endif %}
             {% endfor %}
         };
-        
+
         const instance = new {{ model.name }}(data);
-        
+
         {% for field in model.fields %}
         expect(instance.{{ field.name }}).toBe(data.{{ field.name }});
         {% endfor %}
     });
-    
+
     {% for field in model.fields %}
     {% if field.required %}
     test('should throw error when {{ field.name }} is missing', () => {
@@ -1533,7 +1536,7 @@ describe('{{ model.name }}', () => {
     });
     {% endif %}
     {% endfor %}
-    
+
     test('should convert to JSON correctly', () => {
         const data = {
             {% for field in model.fields %}
@@ -1546,10 +1549,10 @@ describe('{{ model.name }}', () => {
             {% endif %}
             {% endfor %}
         };
-        
+
         const instance = new {{ model.name }}(data);
         const json = instance.toJSON();
-        
+
         expect(json).toEqual(data);
     });
 });
@@ -1558,18 +1561,18 @@ describe('{{ model.name }}', () => {
 
 describe('{{ api_spec.name }}Client', () => {
     let client;
-    
+
     beforeEach(() => {
         client = new {{ api_spec.name }}Client('http://test.example.com');
-        
+
         // Mock fetch
         global.fetch = jest.fn();
     });
-    
+
     afterEach(() => {
         jest.restoreAllMocks();
     });
-    
+
     {% for endpoint in api_spec.endpoints %}
     test('{{ endpoint.js_function_name() }} should make correct request', async () => {
         const mockResponse = {
@@ -1592,9 +1595,9 @@ describe('{{ api_spec.name }}Client', () => {
                 {% endif %}
             })
         };
-        
+
         global.fetch.mockResolvedValue(mockResponse);
-        
+
         const result = await client.{{ endpoint.js_function_name() }}(
             {% if endpoint.parameters %}
             {
@@ -1623,17 +1626,17 @@ Before we wrap up, let's talk about the validation layer that makes this entire 
     async def _validate_generated_code(self, language: str, code_files: Dict[str, str]) -> List[str]:
         """Validate generated code for a specific language."""
         issues = []
-        
+
         if language in self.type_safety_engine.type_checkers:
             checker = self.type_safety_engine.type_checkers[language]
-            
+
             for filename, code in code_files.items():
                 file_issues = checker.validate_generated_code(code)
                 for issue in file_issues:
                     issues.append(f"{filename}: {issue}")
-        
+
         return issues
-```
+````
 
 This validation isn't just syntax checking—it's **semantic validation** that understands the relationships between different parts of your generated ecosystem.
 
@@ -1660,21 +1663,25 @@ Each gate can block generation or provide warnings, depending on your organizati
 When deploying polyglot SDKs in production, you can't just flip a switch and hope everything works. Here's a battle-tested rollout strategy:
 
 **Phase 1: Shadow Generation**
+
 - Generate new SDK versions alongside existing ones
 - Run comprehensive test suites against both versions
 - Collect performance and compatibility metrics
 
 **Phase 2: Canary Deployment**
+
 - Deploy new SDKs to a small percentage of users
 - Monitor error rates, performance metrics, and user feedback
 - Have instant rollback capabilities ready
 
 **Phase 3: Gradual Migration**
+
 - Increase rollout percentage in 10% increments
 - Continue monitoring and validation at each step
 - Provide migration guides and support for developers
 
 **Phase 4: Full Deployment**
+
 - Complete rollout once confidence is high
 - Deprecate old SDK versions with clear timelines
 - Maintain backward compatibility during transition
@@ -1688,7 +1695,7 @@ Your polyglot SDKs need comprehensive monitoring:
 ```python
 class SDKMetricsCollector:
     """Collects usage and performance metrics from generated SDKs."""
-    
+
     def __init__(self):
         self.metrics_store = {}
         self.alert_thresholds = {
@@ -1696,12 +1703,12 @@ class SDKMetricsCollector:
             'response_time_p95': 2.0,  # 2 second response time
             'compatibility_failures': 0.01  # 1% compatibility failures
         }
-    
-    async def record_sdk_usage(self, language: str, endpoint: str, 
+
+    async def record_sdk_usage(self, language: str, endpoint: str,
                               success: bool, duration: float):
         """Record SDK usage metrics."""
         key = f"{language}_{endpoint}"
-        
+
         if key not in self.metrics_store:
             self.metrics_store[key] = {
                 'total_calls': 0,
@@ -1709,27 +1716,27 @@ class SDKMetricsCollector:
                 'total_duration': 0.0,
                 'error_count': 0
             }
-        
+
         metrics = self.metrics_store[key]
         metrics['total_calls'] += 1
         metrics['total_duration'] += duration
-        
+
         if success:
             metrics['successful_calls'] += 1
         else:
             metrics['error_count'] += 1
-            
+
         # Check alert thresholds
         await self._check_alert_conditions(key, metrics)
-    
+
     async def _check_alert_conditions(self, key: str, metrics: Dict[str, Any]):
         """Check if metrics have crossed alert thresholds."""
         error_rate = metrics['error_count'] / metrics['total_calls']
         avg_duration = metrics['total_duration'] / metrics['total_calls']
-        
+
         if error_rate > self.alert_thresholds['error_rate']:
             await self._send_alert(f"High error rate for {key}: {error_rate:.2%}")
-        
+
         if avg_duration > self.alert_thresholds['response_time_p95']:
             await self._send_alert(f"Slow response time for {key}: {avg_duration:.2f}s")
 ```
@@ -1747,7 +1754,7 @@ Sometimes API changes are unavoidable and breaking. Here's how to handle them gr
 ```python
 class BreakingChangeManager:
     """Manages breaking changes across polyglot SDKs."""
-    
+
     def __init__(self):
         self.change_strategies = {
             'field_removal': self._handle_field_removal,
@@ -1755,37 +1762,37 @@ class BreakingChangeManager:
             'endpoint_removal': self._handle_endpoint_removal,
             'parameter_addition': self._handle_parameter_addition
         }
-    
+
     def analyze_breaking_changes(self, old_spec: APISpec, new_spec: APISpec) -> List[str]:
         """Analyze differences and identify breaking changes."""
         breaking_changes = []
-        
+
         # Check for removed models
         old_models = {m.name for m in old_spec.models}
         new_models = {m.name for m in new_spec.models}
         removed_models = old_models - new_models
-        
+
         for model_name in removed_models:
             breaking_changes.append(f"Model {model_name} was removed")
-        
+
         # Check for field changes in existing models
         for old_model in old_spec.models:
             new_model = new_spec.get_model(old_model.name)
             if new_model:
                 field_changes = self._analyze_field_changes(old_model, new_model)
                 breaking_changes.extend(field_changes)
-        
+
         return breaking_changes
-    
+
     def generate_migration_code(self, breaking_changes: List[str]) -> Dict[str, str]:
         """Generate migration code for each language."""
         migration_code = {}
-        
+
         for language in ['python', 'javascript', 'sql']:
             migration_code[language] = self._generate_language_migration(
                 language, breaking_changes
             )
-        
+
         return migration_code
 ```
 
@@ -1796,25 +1803,25 @@ Different versions of your API might need to support different client SDK versio
 ```python
 class CompatibilityMatrix:
     """Manages version compatibility across API and SDK versions."""
-    
+
     def __init__(self):
         self.compatibility_rules = {}
         self.deprecation_schedule = {}
-    
+
     def register_compatibility_rule(self, api_version: str, sdk_versions: List[str]):
         """Register which SDK versions work with which API versions."""
         self.compatibility_rules[api_version] = sdk_versions
-    
+
     def check_compatibility(self, api_version: str, sdk_version: str, language: str) -> bool:
         """Check if a specific SDK version is compatible with API version."""
         compatible_versions = self.compatibility_rules.get(api_version, [])
         return sdk_version in compatible_versions
-    
+
     def generate_compatibility_shims(self, api_version: str, target_sdk_version: str) -> str:
         """Generate compatibility code for version mismatches."""
         if self.check_compatibility(api_version, target_sdk_version, 'any'):
             return ""  # No shim needed
-        
+
         # Generate bridge code for incompatible versions
         return self._generate_version_bridge(api_version, target_sdk_version)
 ```
@@ -1830,6 +1837,7 @@ class CompatibilityMatrix:
 **Solution**: Used the polyglot SDK factory to generate all four SDKs from a single OpenAPI specification.
 
 **Results**:
+
 - Reduced SDK maintenance overhead by 75%
 - API changes now propagate to all SDKs in under 30 minutes
 - Cross-language type safety caught 12 integration bugs before they reached production
@@ -1844,6 +1852,7 @@ class CompatibilityMatrix:
 **Solution**: Extended the type safety engine with compliance validators that ensured generated code met regulatory requirements.
 
 **Results**:
+
 - 100% compliance audit pass rate (up from 78% with manual SDKs)
 - Feature development velocity increased 3x
 - Zero compliance-related production incidents in 18 months
@@ -1858,6 +1867,7 @@ class CompatibilityMatrix:
 **Solution**: Extended the language adapter system to handle resource-constrained environments and generated optimized code for each target.
 
 **Results**:
+
 - Memory usage reduced by 40% on embedded devices
 - Network usage optimized through automatic batching and compression
 - Support for 15+ device types with single API specification
@@ -1876,35 +1886,35 @@ As your API grows, template compilation can become a bottleneck. Here's how to o
 ```python
 class TemplateCompilationOptimizer:
     """Optimizes template compilation for large API specifications."""
-    
+
     def __init__(self):
         self.compilation_cache = {}
         self.dependency_cache = {}
         self.parallel_compilation = True
-    
+
     async def optimize_compilation_order(self, api_spec: APISpec) -> List[str]:
         """Determine optimal compilation order based on dependencies."""
         # Use topological sort to minimize recompilation
         dependency_graph = self._build_dependency_graph(api_spec)
         return self._topological_sort(dependency_graph)
-    
+
     async def parallel_compile(self, templates: List[str]) -> Dict[str, str]:
         """Compile templates in parallel where possible."""
         import asyncio
-        
+
         # Group templates by dependency level
         dependency_levels = self._group_by_dependency_level(templates)
-        
+
         compiled_code = {}
-        
+
         # Compile each level in parallel
         for level in dependency_levels:
             tasks = [self._compile_template(template) for template in level]
             results = await asyncio.gather(*tasks)
-            
+
             for template, code in zip(level, results):
                 compiled_code[template] = code
-        
+
         return compiled_code
 ```
 
@@ -1915,14 +1925,14 @@ Large API specifications can consume significant memory during generation:
 ```python
 class MemoryEfficientGenerator:
     """Generates code with minimal memory footprint."""
-    
+
     def __init__(self):
         self.streaming_enabled = True
         self.chunk_size = 1000  # Process models in chunks
-    
+
     async def stream_generate(self, api_spec: APISpec) -> AsyncIterator[Tuple[str, str]]:
         """Generate code files as a stream to minimize memory usage."""
-        
+
         # Process models in chunks
         for model_chunk in self._chunk_models(api_spec.models, self.chunk_size):
             partial_spec = APISpec(
@@ -1932,13 +1942,13 @@ class MemoryEfficientGenerator:
                 endpoints=[],  # Process endpoints separately
                 base_url=api_spec.base_url
             )
-            
+
             # Generate code for this chunk
             chunk_code = await self._generate_chunk(partial_spec)
-            
+
             for filename, code in chunk_code.items():
                 yield filename, code
-                
+
             # Clear memory
             del partial_spec
             del chunk_code
@@ -1958,7 +1968,7 @@ import hypothesis.strategies as st
 
 class PolyglotPropertyTests:
     """Property-based tests for cross-language consistency."""
-    
+
     @given(
         user_data=st.fixed_dictionaries({
             'id': st.integers(min_value=1),
@@ -1969,22 +1979,22 @@ class PolyglotPropertyTests:
     )
     async def test_user_serialization_consistency(self, user_data):
         """Test that user serialization works consistently across languages."""
-        
+
         # Create user in Python
         python_user = PythonUser(**user_data)
         python_json = python_user.to_dict()
-        
+
         # Simulate JavaScript deserialization
         js_user = JavaScriptUser.from_json(python_json)
         js_json = js_user.to_json()
-        
+
         # Test round-trip consistency
         assert python_json == js_json
-        
+
         # Test SQL compatibility
         sql_insert = generate_sql_insert('users', python_json)
         assert validate_sql_syntax(sql_insert)
-    
+
     @given(
         api_response=st.one_of(
             st.just({'status': 'success', 'data': {}}),
@@ -1993,13 +2003,13 @@ class PolyglotPropertyTests:
     )
     async def test_error_handling_consistency(self, api_response):
         """Test that error handling works consistently across languages."""
-        
+
         # Test Python error handling
         python_result = await python_client.handle_response(api_response)
-        
+
         # Test JavaScript error handling
         js_result = await js_client.handle_response(api_response)
-        
+
         # Both should handle errors the same way
         if api_response['status'] == 'error':
             assert isinstance(python_result, Exception)
@@ -2016,31 +2026,31 @@ Ensure that all generated SDKs fulfill the same contract:
 ```python
 class ContractTestSuite:
     """Tests that all SDKs implement the same contract."""
-    
+
     def __init__(self, api_spec: APISpec):
         self.api_spec = api_spec
         self.test_scenarios = self._generate_test_scenarios()
-    
+
     def _generate_test_scenarios(self) -> List[Dict[str, Any]]:
         """Generate test scenarios from API specification."""
         scenarios = []
-        
+
         for endpoint in self.api_spec.endpoints:
             scenarios.append({
                 'endpoint': endpoint,
                 'test_data': self._generate_test_data(endpoint),
                 'expected_behavior': self._define_expected_behavior(endpoint)
             })
-        
+
         return scenarios
-    
+
     async def run_contract_tests(self, sdk_implementations: Dict[str, Any]) -> Dict[str, bool]:
         """Run contract tests against all SDK implementations."""
         results = {}
-        
+
         for language, sdk in sdk_implementations.items():
             language_results = []
-            
+
             for scenario in self.test_scenarios:
                 try:
                     result = await self._run_scenario(sdk, scenario)
@@ -2048,9 +2058,9 @@ class ContractTestSuite:
                 except Exception as e:
                     language_results.append(False)
                     print(f"Contract test failed for {language}: {e}")
-            
+
             results[language] = all(language_results)
-        
+
         return results
 ```
 
@@ -2077,7 +2087,7 @@ What we've built in this chapter represents a fundamental shift in how we think 
 Imagine this system running in your organization:
 
 - **API changes propagate instantly** across all client languages
-- **Type safety is maintained** across your entire polyglot ecosystem  
+- **Type safety is maintained** across your entire polyglot ecosystem
 - **New developers get productive immediately** with language-native SDKs
 - **Cross-team integration becomes trivial** because everyone's working from the same semantic model
 - **Maintenance overhead drops dramatically** because you're maintaining one specification instead of N implementations
@@ -2101,7 +2111,7 @@ Imagine this system running in your organization:
 The polyglot SDK generation system we've built sets the foundation for even more advanced patterns we'll explore in future chapters:
 
 - **Chapter 3**: Infrastructure as Code with dynamic scaling based on cross-language performance metrics
-- **Chapter 4**: Database schema evolution that coordinates with API changes across all client languages  
+- **Chapter 4**: Database schema evolution that coordinates with API changes across all client languages
 - **Chapter 5**: Adaptive monitoring that understands the semantic relationships between polyglot components
 
 > 🚀 **The Big Picture**: We're not just building better tools—we're building **intelligent platform systems** that understand the deep structure of software and can express that understanding in whatever language or format the situation demands.
@@ -2117,13 +2127,15 @@ From self-modifying FastAPI generators to polyglot SDK factories, we're building
 Ready to push this system even further? Here are some challenges that will stretch your understanding and skills:
 
 ### 🎯 Exercise 1: Language Extension Challenge
+
 **Goal**: Add support for a fourth language (Go, Rust, or TypeScript)
 
 **What you'll learn**: How to create new language adapters and extend the semantic model
 
 **Key tasks**:
+
 - Create a new `LanguageAdapter` for your chosen language
-- Build templates that feel native to that language's ecosystem  
+- Build templates that feel native to that language's ecosystem
 - Extend the type safety engine with language-specific validation
 - Update the dependency manager to handle the new language's import patterns
 
@@ -2132,11 +2144,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Hint**: Start with Go—it has clear conventions around naming, error handling, and package structure that make it a good candidate for template generation.
 
 ### 🧪 Exercise 2: Advanced Type Inference Engine
+
 **Goal**: Build a system that can infer complex type relationships from API usage patterns
 
 **What you'll learn**: How to use static analysis to improve code generation
 
 **Key tasks**:
+
 - Analyze existing API endpoints to infer model relationships
 - Detect when fields should be enums based on value patterns
 - Automatically generate validation rules from usage data
@@ -2147,11 +2161,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Hint**: Look at how TypeScript's type inference works—it's a great model for this kind of intelligent type analysis.
 
 ### 🚀 Exercise 3: Real-Time Code Synchronization
+
 **Goal**: Create a system that keeps all generated SDKs synchronized as the API evolves
 
 **What you'll learn**: How to build reactive systems that respond to API changes
 
 **Key tasks**:
+
 - Monitor API specifications for changes (file watching, webhook endpoints)
 - Automatically regenerate affected SDK components
 - Create migration scripts for breaking changes
@@ -2162,11 +2178,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Hint**: Use WebSocket connections or Server-Sent Events to push updates to development environments in real-time.
 
 ### 🔍 Exercise 4: Performance Optimization Analyzer
+
 **Goal**: Build analysis tools that optimize generated code based on usage patterns
 
 **What you'll learn**: How to use profiling data to improve template output
 
 **Key tasks**:
+
 - Collect performance metrics from generated SDKs
 - Identify bottlenecks in generated code patterns
 - Automatically optimize templates based on performance data
@@ -2177,11 +2195,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Hint**: Focus on common performance patterns like N+1 queries, unnecessary serialization, and inefficient data structures.
 
 ### 🎨 Exercise 5: Custom Template Designer
+
 **Goal**: Create a visual interface for designing and customizing templates
 
 **What you'll learn**: How to make template systems accessible to non-programmers
 
 **Key tasks**:
+
 - Build a drag-and-drop interface for template composition
 - Create visual representations of template dependencies
 - Allow real-time preview of generated code
@@ -2192,11 +2212,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Hint**: Think about how tools like Webflow or Figma make complex technical concepts accessible through visual interfaces.
 
 ### 🌐 Exercise 6: Multi-Tenant Template System
+
 **Goal**: Extend the system to support multiple organizations with different requirements
 
 **What you'll learn**: How to build scalable, multi-tenant platform systems
 
 **Key tasks**:
+
 - Add tenant isolation and customization capabilities
 - Create template sharing and marketplace features
 - Implement usage tracking and billing
@@ -2205,11 +2227,13 @@ Ready to push this system even further? Here are some challenges that will stret
 **Bonus points**: Add A/B testing capabilities so organizations can experiment with different template variants.
 
 ### 🛡️ Exercise 7: Security-First Template Generation
+
 **Goal**: Build security analysis directly into the template generation process
 
 **What you'll learn**: How to make security a first-class concern in code generation
 
 **Key tasks**:
+
 - Create security scanners that analyze generated code
 - Build templates that automatically implement security best practices
 - Add vulnerability detection for common security issues
@@ -2222,21 +2246,27 @@ Ready to push this system even further? Here are some challenges that will stret
 ## Advanced Challenges for the Ambitious
 
 ### 🏆 Master Challenge 1: Self-Healing SDK Ecosystem
+
 Build a system that can automatically fix compatibility issues when they arise:
+
 - Monitor SDK usage in production
 - Detect when breaking changes cause issues
 - Automatically generate patches and compatibility shims
 - Test and deploy fixes without human intervention
 
 ### 🏆 Master Challenge 2: AI-Powered Template Evolution
+
 Integrate machine learning with template generation:
+
 - Use AI to analyze code patterns and suggest improvements
 - Generate new template variations based on successful patterns
 - Predict which template changes will improve performance
 - Create natural language interfaces for template customization
 
 ### 🏆 Master Challenge 3: Cross-Platform Mobile SDK Generation
+
 Extend the system to generate native mobile SDKs:
+
 - Add support for Swift (iOS) and Kotlin (Android)
 - Handle platform-specific patterns and constraints
 - Generate UI components for common API interactions
@@ -2247,21 +2277,27 @@ Extend the system to generate native mobile SDKs:
 ## Community Challenges
 
 ### 📚 Documentation Challenge
+
 **Create comprehensive documentation for your polyglot system**:
+
 - Write tutorials for different skill levels
 - Create video walkthroughs of complex concepts
 - Build interactive examples and playgrounds
 - Develop troubleshooting guides and FAQs
 
 ### 🗣️ Speaking Challenge
+
 **Share your learnings with the community**:
+
 - Give talks at conferences about polyglot template systems
 - Write blog posts about your implementation experiences
 - Create podcasts discussing the future of code generation
 - Host workshops teaching others these techniques
 
 ### 🤝 Open Source Challenge
+
 **Contribute to the broader platform engineering community**:
+
 - Open source your language adapters and templates
 - Contribute to existing template generation projects
 - Create reusable components that others can build on
@@ -2269,12 +2305,12 @@ Extend the system to generate native mobile SDKs:
 
 ---
 
-*The polyglot revolution is just getting started. Every template you write, every language you support, every semantic model you create is a step toward more intelligent, more adaptive platform systems.*
+_The polyglot revolution is just getting started. Every template you write, every language you support, every semantic model you create is a step toward more intelligent, more adaptive platform systems._
 
-*Ready to build the future of platform engineering? The templates are waiting for you to make them smarter.*
+_Ready to build the future of platform engineering? The templates are waiting for you to make them smarter._
 
 ---
 
 **Next Up: Chapter 3 - Infrastructure as Code with Dynamic Scaling**
 
-*Where polyglot intelligence meets Kubernetes, and templates learn to optimize your entire infrastructure stack in real-time.*
+_Where polyglot intelligence meets Kubernetes, and templates learn to optimize your entire infrastructure stack in real-time._

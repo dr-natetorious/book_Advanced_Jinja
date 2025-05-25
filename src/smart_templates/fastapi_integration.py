@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import traceback
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -129,9 +130,9 @@ class SmartFastApiTemplates(SmartTemplates):
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; }}
         .error-container {{ max-width: 800px; }}
         .error-type {{ color: #d73a49; font-weight: bold; }}
-        .stack-trace {{ background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; 
+        .stack-trace {{ background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
                        padding: 16px; overflow-x: auto; white-space: pre; font-family: monospace; }}
-        .metadata {{ background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; 
+        .metadata {{ background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;
                     padding: 12px; margin: 16px 0; }}
     </style>
 </head>
@@ -151,7 +152,11 @@ class SmartFastApiTemplates(SmartTemplates):
 </body>
 </html>"""
         else:
-            display_message = message if self.debug_mode else "An error occurred while processing your request."
+            display_message = (
+                message
+                if self.debug_mode
+                else "An error occurred while processing your request."
+            )
             return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,7 +164,7 @@ class SmartFastApiTemplates(SmartTemplates):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Error</title>
     <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
                margin: 40px; text-align: center; color: #586069; }}
         .error-container {{ max-width: 600px; margin: 0 auto; }}
         h1 {{ color: #24292e; }}
@@ -201,7 +206,9 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
 
         def decorator(func: Callable) -> Callable:
             @wraps(func)
-            async def wrapper(request: Request, *args: Any, **kwargs: Any) -> JSONResponse | HTMLResponse:
+            async def wrapper(
+                request: Request, *args: Any, **kwargs: Any
+            ) -> JSONResponse | HTMLResponse:
                 try:
                     # Execute the original function
                     if asyncio.iscoroutinefunction(func):
@@ -219,7 +226,9 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
 
                     else:
                         # Prepare template context with FastAPI-specific handling
-                        template_context = templates_instance.prepare_context(data, request)
+                        template_context = templates_instance.prepare_context(
+                            data, request
+                        )
 
                         # Render template
                         content, render_error = templates_instance.render_safe(
@@ -237,23 +246,31 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                                 request,
                             )
 
-                            error_content, error_render_error = templates_instance.render_safe(
-                                error_template, error_context
+                            error_content, error_render_error = (
+                                templates_instance.render_safe(
+                                    error_template, error_context
+                                )
                             )
 
                             if error_render_error:
                                 # Fallback to basic HTML error page
-                                fallback_content = templates_instance.create_fallback_error_html(
-                                    error=render_error
+                                fallback_content = (
+                                    templates_instance.create_fallback_error_html(
+                                        error=render_error
+                                    )
                                 )
-                                return HTMLResponse(content=fallback_content, status_code=500)
+                                return HTMLResponse(
+                                    content=fallback_content, status_code=500
+                                )
 
                             return HTMLResponse(content=error_content, status_code=500)
 
                         return HTMLResponse(content=content)
 
                 except Exception as e:
-                    templates_instance._logger.exception("Unhandled exception in smart_response")
+                    templates_instance._logger.exception(
+                        "Unhandled exception in smart_response"
+                    )
 
                     error_data = {
                         "error": {
@@ -264,13 +281,17 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                     }
 
                     if templates_instance.debug_mode:
-                        error_data["error"]["stack_trace"] = traceback.format_exc().splitlines()
+                        error_data["error"]["stack_trace"] = (
+                            traceback.format_exc().splitlines()
+                        )
 
                     # Return appropriate error response based on content negotiation
                     if templates_instance._wants_json_response(request):
                         return JSONResponse(status_code=500, content=error_data)
                     else:
-                        error_html = templates_instance.create_fallback_error_html(message=str(e))
+                        error_html = templates_instance.create_fallback_error_html(
+                            message=str(e)
+                        )
                         return HTMLResponse(content=error_html, status_code=500)
 
             return wrapper

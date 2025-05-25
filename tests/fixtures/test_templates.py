@@ -1,6 +1,6 @@
-from tests import TEST_TEMPLATES_DIR
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Define the root directory for test templates relative to this test file
 TEMPLATES_ROOT = Path(__file__).parent / "templates"
@@ -28,6 +28,8 @@ EXPECTED_TEMPLATE_FILES = [
     "email/enrollment_confirmation.html",
     "email/course_completion.html",
 ]
+
+
 @pytest.mark.parametrize("template_relative_path", EXPECTED_TEMPLATE_FILES)
 def test_template_file_exists(template_relative_path):
     """
@@ -36,9 +38,11 @@ def test_template_file_exists(template_relative_path):
     """
     template_full_path = TEMPLATES_ROOT / template_relative_path
 
-    print(f"Checking for template: {template_full_path}") # For verbose output during tests
+    print(
+        f"Checking for template: {template_full_path}"
+    )  # For verbose output during tests
 
-    assert template_full_path.exists(), \
-        f"Missing template file: {template_full_path}"
-    assert template_full_path.is_file(), \
-        f"Path exists but is not a file: {template_full_path}"
+    assert template_full_path.exists(), f"Missing template file: {template_full_path}"
+    assert (
+        template_full_path.is_file()
+    ), f"Path exists but is not a file: {template_full_path}"

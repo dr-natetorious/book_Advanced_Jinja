@@ -11,13 +11,13 @@
             <td style="padding: 30px;">
                 <h1 style="color: #0056b3; font-size: 24px; text-align: center; margin-bottom: 20px;">Certificate of Completion</h1>
                 <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">This certifies that</p>
-                
+
                 {% if object is defined and object.student and object.course %}
                     <h2 style="color: #0056b3; font-size: 28px; text-align: center; margin-bottom: 20px;">{{ object.student.name }}</h2>
                     <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">has successfully completed the course:</p>
 
                     <h3 style="color: #0056b3; font-size: 22px; text-align: center; margin-bottom: 40px;">{{ object.course.title }} ({{ object.course.course_code }})</h3>
-                    
+
                     <table width="100%" cellpadding="5" cellspacing="0" border="0" style="margin-bottom: 20px; border: 1px solid #eee;">
                         <tr>
                             <td width="40%" style="font-weight: bold; padding: 8px; background-color: #f9f9f9;">Completion Date:</td>

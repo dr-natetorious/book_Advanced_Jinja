@@ -10,8 +10,7 @@ from fastapi.testclient import TestClient
 # Import necessary types from your application and conftest for assertions
 from smart_templates.core import SmartTemplateRegistry, SmartTemplates
 from smart_templates.fastapi_integration import SmartFastApiTemplates
-from tests import TEST_TEMPLATES_DIR
-from tests.conftest import ( # Import the utility functions from conftest
+from tests.conftest import (  # Import the utility functions from conftest
     assert_no_template_errors,
     assert_template_error,
     assert_template_rendered,
@@ -80,7 +79,9 @@ def test_smart_registry_fixture(smart_registry: SmartTemplateRegistry):
     assert mapping["type"] == "template"
 
     # For Student, ACTIVE variation
-    mapping = smart_registry.find_template(student_obj, variation=EnrollmentStatus.ACTIVE)
+    mapping = smart_registry.find_template(
+        student_obj, variation=EnrollmentStatus.ACTIVE
+    )
     assert mapping is not None
     assert mapping["path"] == "student/active.html"
     assert mapping["type"] == "template"
@@ -103,16 +104,21 @@ def test_smart_templates_fixture(smart_templates: SmartTemplates, templates_dir:
     # Corrected: Accessing the directory via the Jinja2 environment's loader
     # The FileSystemLoader's searchpath is a list of directories.
     assert smart_templates.env.loader.searchpath == [str(templates_dir)]
-    assert smart_templates.env.autoescape is True # This is passed to self.env but not directly stored
-    assert smart_templates.env.is_async is False # This is passed to self.env but not directly stored
+    assert (
+        smart_templates.env.autoescape is True
+    )  # This is passed to self.env but not directly stored
+    assert (
+        smart_templates.env.is_async is False
+    )  # This is passed to self.env but not directly stored
     # Corrected: attribute is 'debug_mode', not '_debug_mode'
     assert smart_templates.debug_mode is True
 
 
-
 @pytest.mark.fastapi
 @pytest.mark.templates
-def test_smart_fastapi_templates_fixture(smart_fastapi_templates: SmartFastApiTemplates, templates_dir: Path):
+def test_smart_fastapi_templates_fixture(
+    smart_fastapi_templates: SmartFastApiTemplates, templates_dir: Path
+):
     """
     Test that the smart_fastapi_templates fixture returns a SmartFastApiTemplates instance
     with the correct initial configuration.
@@ -135,13 +141,18 @@ def test_smart_pytest_templates_fixture(smart_pytest_templates: Any):
     else:
         # Assuming SmartPytestTemplates exists and is importable
         from smart_templates.pytest_integration import SmartPytestTemplates
+
         assert isinstance(smart_pytest_templates, SmartPytestTemplates)
-        assert hasattr(smart_pytest_templates, 'output_dir')
+        assert hasattr(smart_pytest_templates, "output_dir")
         assert smart_pytest_templates.debug_mode is True
 
 
 @pytest.mark.models
-def test_sample_test_data_fixture(sample_test_data: tuple[list[School], list[Course], list[Student], list[Enrollment]]):
+def test_sample_test_data_fixture(
+    sample_test_data: tuple[
+        list[School], list[Course], list[Student], list[Enrollment]
+    ],
+):
     """
     Test that sample_test_data fixture returns a tuple of lists with expected types and content.
     """
@@ -283,6 +294,7 @@ def test_assert_template_error_utility():
     """
     Test the assert_template_error utility function using a mock error object.
     """
+
     # Create a mock object that mimics the expected error structure
     class MockErrorDetail:
         def __init__(self, error_type: str):
@@ -295,15 +307,23 @@ def test_assert_template_error_utility():
     mock_type_error = MockTemplateError("RenderTypeError")
     assert_template_error(mock_type_error, "RenderTypeError")
 
-    with pytest.raises(AssertionError, match="Expected template error but none occurred"):
+    with pytest.raises(
+        AssertionError, match="Expected template error but none occurred"
+    ):
         assert_template_error(None, "AnyError")
 
-    with pytest.raises(AssertionError, match="Expected error type 'SyntaxError', got 'RenderTypeError'"):
+    with pytest.raises(
+        AssertionError, match="Expected error type 'SyntaxError', got 'RenderTypeError'"
+    ):
         assert_template_error(mock_type_error, "SyntaxError")
 
     # Test when the error object doesn't have the expected structure
-    with pytest.raises(AssertionError, match="Error object does not have expected structure"):
+    with pytest.raises(
+        AssertionError, match="Error object does not have expected structure"
+    ):
         assert_template_error("Just a string", "AnyError")
 
-    with pytest.raises(AssertionError, match="Error object does not have expected structure"):
+    with pytest.raises(
+        AssertionError, match="Error object does not have expected structure"
+    ):
         assert_template_error(object(), "AnyError")

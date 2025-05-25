@@ -6,11 +6,11 @@ Here's the thing nobody tells you about platform engineering: while everyone's o
 
 And not just any template engine. **Jinja2**.
 
-You know it, you've probably used it, but have you really *seen* it? We're talking about the engine that's secretly powering everything from your Ansible playbooks to your Kubernetes manifests, from your CI/CD pipelines to those monitoring configurations that somehow always work perfectly. It's everywhere, and once you start noticing it, you can't unsee it.
+You know it, you've probably used it, but have you really _seen_ it? We're talking about the engine that's secretly powering everything from your Ansible playbooks to your Kubernetes manifests, from your CI/CD pipelines to those monitoring configurations that somehow always work perfectly. It's everywhere, and once you start noticing it, you can't unsee it.
 
 > 💡 **Plot Twist**: That "simple" template engine you learned for web dev? It's actually running a significant chunk of the internet's infrastructure.
 
-But here's the million-dollar question: Why has a template engine—originally designed to generate web pages—become absolutely *essential* to platform engineering? 
+But here's the million-dollar question: Why has a template engine—originally designed to generate web pages—become absolutely _essential_ to platform engineering?
 
 The answer isn't technical. It's philosophical.
 
@@ -20,13 +20,13 @@ See, modern infrastructure has a fundamental problem that's been driving us all 
 
 ## The 10,000 Foot View: The Architecture of Adaptability
 
-Let's get real about what we're dealing with in modern platform engineering. Picture this: you're managing not dozens, not hundreds, but potentially *thousands* of services. Each one is a special little snowflake with its own quirks, requirements, and tendency to break at 3 AM on a Friday.
+Let's get real about what we're dealing with in modern platform engineering. Picture this: you're managing not dozens, not hundreds, but potentially _thousands_ of services. Each one is a special little snowflake with its own quirks, requirements, and tendency to break at 3 AM on a Friday.
 
 ### The Triple Threat of Platform Complexity
 
 **Scale Complexity**: Remember when you had three services and thought you were hot stuff? Those were the days. Now you've got services that spawn other services, talking to databases that replicate across continents, with more configuration files than you can shake a stick at.
 
-**Environmental Diversity**: Development, staging, production. Sounds simple, right? Wrong. You've also got regional variations, compliance environments, customer-specific deployments, and that special "demo" environment that's somehow become mission-critical. Each needs slightly different configurations. *Slightly*.
+**Environmental Diversity**: Development, staging, production. Sounds simple, right? Wrong. You've also got regional variations, compliance environments, customer-specific deployments, and that special "demo" environment that's somehow become mission-critical. Each needs slightly different configurations. _Slightly_.
 
 **Evolutionary Pressure**: Here's the kicker—nothing stays the same. Ever. Security policies change overnight. Performance requirements shift with traffic patterns. That new compliance framework just dropped, and guess what? Everything needs updating. Again.
 
@@ -46,12 +46,12 @@ Sound familiar? Yeah, we've all been there.
 
 ### Enter the Template Revolution
 
-Here's where Jinja2 changes everything. Instead of thinking in terms of specific configurations, you start thinking in *patterns*. Instead of managing hundreds of files, you manage a handful of templates that can generate infinite variations.
+Here's where Jinja2 changes everything. Instead of thinking in terms of specific configurations, you start thinking in _patterns_. Instead of managing hundreds of files, you manage a handful of templates that can generate infinite variations.
 
 ```python
 # Traditional approach: The horror show
 # service-a-prod.yaml
-# service-a-staging.yaml  
+# service-a-staging.yaml
 # service-b-prod.yaml
 # service-b-staging.yaml
 # ... (hundreds more files, each slightly different)
@@ -60,7 +60,7 @@ Here's where Jinja2 changes everything. Instead of thinking in terms of specific
 # service-template.yaml.j2
 ```
 
-This isn't just a different way of doing the same thing. It's a completely different way of *thinking* about infrastructure.
+This isn't just a different way of doing the same thing. It's a completely different way of _thinking_ about infrastructure.
 
 > 🎯 **Key Insight**: The magic isn't in the template syntax. It's in the mental shift from "managing things" to "managing patterns of things."
 
@@ -74,19 +74,19 @@ When you embrace template-driven infrastructure, you unlock four superpowers:
 
 **Evolvability**: Update patterns centrally, propagate changes automatically. That security policy update? One template change, done.
 
-**Context Awareness**: Generate configurations based on runtime data, metrics, environment conditions. Your infrastructure becomes *smart*.
+**Context Awareness**: Generate configurations based on runtime data, metrics, environment conditions. Your infrastructure becomes _smart_.
 
 ---
 
 ## The 1,000 Foot View: The Philosophy of Intelligent Templating
 
-Okay, let's dive deeper into what makes Jinja2 not just useful, but *transformative* for platform engineering. It's not about the syntax (though the syntax is pretty sweet). It's about the underlying philosophy that aligns perfectly with how modern platform engineering actually works.
+Okay, let's dive deeper into what makes Jinja2 not just useful, but _transformative_ for platform engineering. It's not about the syntax (though the syntax is pretty sweet). It's about the underlying philosophy that aligns perfectly with how modern platform engineering actually works.
 
 ### The Five Principles That Change Everything
 
 #### 1. Separation of Concerns (Or: How to Sleep at Night)
 
-Here's a revelation: templates separate *what* you want to achieve from *how* it gets implemented. Sounds simple, but this is huge.
+Here's a revelation: templates separate _what_ you want to achieve from _how_ it gets implemented. Sounds simple, but this is huge.
 
 Your platform team defines the patterns—the security requirements, the resource allocation strategies, the monitoring configurations. The application teams focus on their business logic. Nobody steps on anyone's toes, and everybody stays in their lane.
 
@@ -103,7 +103,7 @@ It's like having a really good contractor. You tell them "I want a secure, scala
 
 #### 2. Configuration as Code (The Good Kind)
 
-Templates *are* code. Real code. They go through code review, they live in version control, they get tested. This brings all the good practices of software engineering to infrastructure management.
+Templates _are_ code. Real code. They go through code review, they live in version control, they get tested. This brings all the good practices of software engineering to infrastructure management.
 
 No more "I made a quick change in production and forgot to document it." No more "the staging environment is different from production but nobody knows why." Everything is explicit, versioned, and reviewable.
 
@@ -111,7 +111,7 @@ No more "I made a quick change in production and forgot to document it." No more
 
 #### 3. Data-Driven Architecture (Where Things Get Interesting)
 
-This is where the magic happens. Templates don't just generate static configurations—they consume data to produce *intelligent* configurations that adapt to changing conditions.
+This is where the magic happens. Templates don't just generate static configurations—they consume data to produce _intelligent_ configurations that adapt to changing conditions.
 
 Imagine a template that looks at your service's actual CPU usage patterns and automatically adjusts resource requests. Or one that examines error rates and automatically adds circuit breakers. We're not talking science fiction here; this is all totally doable.
 
@@ -151,7 +151,7 @@ env = Environment(
 )
 ```
 
-This isn't just configuration—it's *policy*. You're defining how templates load, where they come from, how they're cached, and what security measures are in place. In production, you might disable auto-reload for performance but crank up the cache size. In development, you want fast iteration so auto-reload stays on.
+This isn't just configuration—it's _policy_. You're defining how templates load, where they come from, how they're cached, and what security measures are in place. In production, you might disable auto-reload for performance but crank up the cache size. In development, you want fast iteration so auto-reload stays on.
 
 ### Template Inheritance: Infrastructure Patterns Made Real
 
@@ -226,7 +226,7 @@ readinessProbe:
 {% endmacro %}
 ```
 
-Now you've got these reusable building blocks. Need Prometheus monitoring on a service? Just call the macro. Need health checks? There's a macro for that. 
+Now you've got these reusable building blocks. Need Prometheus monitoring on a service? Just call the macro. Need health checks? There's a macro for that.
 
 The beauty is that these macros can evolve. Discover that your health check initial delay is too aggressive? Update the macro once, and every service gets the improvement.
 
@@ -253,19 +253,19 @@ Now we're getting to the good stuff. This is where Jinja2 stops being just a tem
 
 ### 1. Context-Aware Configuration Generation
 
-Here's where things get *really* interesting. What if your templates could make intelligent decisions based on real-time operational data?
+Here's where things get _really_ interesting. What if your templates could make intelligent decisions based on real-time operational data?
 
 ```python
 class PlatformContext:
     """Provides rich context for template rendering."""
-    
+
     def __init__(self, service_name: str, environment: str):
         self.service_name = service_name
         self.environment = environment
         self.metrics = self._load_metrics()
         self.policies = self._load_policies()
         self.topology = self._discover_topology()
-    
+
     def _load_metrics(self) -> Dict[str, Any]:
         """Load real-time metrics from monitoring systems."""
         return {
@@ -274,7 +274,7 @@ class PlatformContext:
             'request_rate': self._get_request_metrics(),
             'error_rate': self._get_error_metrics()
         }
-    
+
     def _load_policies(self) -> Dict[str, Any]:
         """Load security and compliance policies."""
         return {
@@ -282,7 +282,7 @@ class PlatformContext:
             'compliance_frameworks': self._get_compliance_requirements(),
             'data_classification': self._get_data_classification()
         }
-    
+
     def to_template_context(self) -> Dict[str, Any]:
         """Convert to template context with computed values."""
         return {
@@ -291,19 +291,19 @@ class PlatformContext:
             'metrics': self.metrics,
             'policies': self.policies,
             'topology': self.topology,
-            
+
             # Computed values
             'resource_requirements': self._compute_resources(),
             'scaling_parameters': self._compute_scaling(),
             'security_configuration': self._compute_security(),
             'monitoring_configuration': self._compute_monitoring()
         }
-    
+
     def _compute_resources(self) -> Dict[str, str]:
         """Compute resource requirements based on metrics."""
         cpu_percentile_95 = self.metrics['cpu_utilization']['p95']
         memory_max = self.metrics['memory_usage']['max']
-        
+
         # Add 50% headroom for CPU, 30% for memory
         return {
             'cpu_request': f"{int(cpu_percentile_95 * 1.5)}m",
@@ -332,7 +332,7 @@ metadata:
     platform.io/optimization-level: {{ optimization_level }}
 spec:
   replicas: {{ compute_replicas(metrics.request_rate, metrics.cpu_utilization) }}
-  
+
   {# Auto-scaling based on historical patterns #}
   {% if metrics.request_rate.variance > 0.3 %}
   # High variance detected - enable HPA
@@ -356,7 +356,7 @@ spec:
           type: Utilization
           averageUtilization: {{ compute_cpu_target(metrics.cpu_utilization) }}
   {% endif %}
-  
+
   template:
     metadata:
       annotations:
@@ -369,7 +369,7 @@ spec:
       containers:
       - name: {{ service_name }}
         image: {{ image }}
-        
+
         {# Dynamic resource allocation based on metrics #}
         resources:
           requests:
@@ -378,7 +378,7 @@ spec:
           limits:
             cpu: {{ resource_requirements.cpu_limit }}
             memory: {{ resource_requirements.memory_limit }}
-        
+
         {# Adaptive health checks based on service characteristics #}
         {{ health_check(
             path=health_check_path,
@@ -386,7 +386,7 @@ spec:
             initial_delay=compute_health_check_delay(metrics.startup_time),
             period=compute_health_check_period(metrics.request_rate)
         ) | indent(8) }}
-        
+
         {# Environment-specific optimizations #}
         {% if environment == 'production' %}
         # Production optimizations based on operational data
@@ -400,7 +400,7 @@ spec:
 
 Look at what's happening here. The template is examining traffic variance and automatically deciding whether to enable horizontal pod autoscaling. It's computing resource requirements based on historical usage. It's adjusting health check timing based on actual startup patterns.
 
-This isn't just configuration generation—it's *intelligent* configuration generation.
+This isn't just configuration generation—it's _intelligent_ configuration generation.
 
 > 🤯 **Whoa Moment**: Your infrastructure configurations are now being optimized by the same data that drives them. It's like having a really smart operations person watching your system 24/7 and constantly tuning it for optimal performance.
 
@@ -411,70 +411,70 @@ Here's something crucial that a lot of people skip: you absolutely must test you
 ```python
 class TemplateValidator:
     """Validates template output for correctness and compliance."""
-    
+
     def __init__(self):
         self.kubernetes_validator = KubernetesValidator()
         self.security_validator = SecurityValidator()
         self.compliance_validator = ComplianceValidator()
-    
-    async def validate_template_output(self, template_name: str, 
+
+    async def validate_template_output(self, template_name: str,
                                      rendered_output: str,
                                      context: Dict[str, Any]) -> ValidationResult:
         """Comprehensive validation of template output."""
-        
+
         results = ValidationResult()
-        
+
         # Syntax validation
         syntax_result = await self._validate_syntax(rendered_output)
         results.add_result('syntax', syntax_result)
-        
+
         # Kubernetes API validation
         if template_name.endswith('.yaml.j2'):
             k8s_result = await self.kubernetes_validator.validate(rendered_output)
             results.add_result('kubernetes', k8s_result)
-        
+
         # Security policy validation
         security_result = await self.security_validator.validate(
             rendered_output, context.get('policies', {})
         )
         results.add_result('security', security_result)
-        
+
         # Compliance validation
         compliance_result = await self.compliance_validator.validate(
             rendered_output, context.get('compliance_requirements', [])
         )
         results.add_result('compliance', compliance_result)
-        
+
         # Resource optimization validation
         optimization_result = await self._validate_resource_optimization(
             rendered_output, context.get('metrics', {})
         )
         results.add_result('optimization', optimization_result)
-        
+
         return results
-    
-    async def _validate_resource_optimization(self, output: str, 
+
+    async def _validate_resource_optimization(self, output: str,
                                             metrics: Dict[str, Any]) -> ValidationResult:
         """Validate that resource allocations are optimized."""
-        
+
         result = ValidationResult()
-        
+
         # Parse resource specifications from output
         resources = self._extract_resource_specs(output)
-        
+
         for resource_spec in resources:
             # Check for over-provisioning
             if self._is_over_provisioned(resource_spec, metrics):
                 result.add_warning(
                     f"Resource {resource_spec['name']} may be over-provisioned"
                 )
-            
+
             # Check for under-provisioning
             if self._is_under_provisioned(resource_spec, metrics):
                 result.add_error(
                     f"Resource {resource_spec['name']} may be under-provisioned"
                 )
-        
+
         return result
 ```
 
@@ -495,27 +495,27 @@ When you're dealing with dozens or hundreds of templates, organization becomes c
 ```python
 class TemplateRegistry:
     """Centralized registry for template management and versioning."""
-    
+
     def __init__(self, base_path: Path):
         self.base_path = base_path
         self.templates = {}
         self.versions = {}
         self.dependencies = {}
         self._load_templates()
-    
+
     def _load_templates(self):
         """Load and index all templates with metadata."""
         for template_path in self.base_path.rglob('*.j2'):
             template_info = self._parse_template_metadata(template_path)
             self.templates[template_info['name']] = template_info
-            
+
             # Build dependency graph
             self._analyze_dependencies(template_info)
-    
+
     def _parse_template_metadata(self, template_path: Path) -> Dict[str, Any]:
         """Extract metadata from template comments."""
         content = template_path.read_text()
-        
+
         # Extract metadata from template header comments
         metadata = {
             'name': template_path.stem,
@@ -526,22 +526,22 @@ class TemplateRegistry:
             'output_format': self._extract_output_format(content),
             'tags': self._extract_tags(content)
         }
-        
+
         return metadata
-    
-    def get_template_with_context(self, name: str, 
+
+    def get_template_with_context(self, name: str,
                                  context: Dict[str, Any]) -> Template:
         """Get template with validated context."""
-        
+
         template_info = self.templates[name]
-        
+
         # Validate required context
         self._validate_context(template_info['required_context'], context)
-        
+
         # Load template with environment optimizations
         env = self._create_optimized_environment(template_info)
         template = env.get_template(str(template_info['path']))
-        
+
         return template
 ```
 
@@ -559,7 +559,7 @@ In production, template rendering performance can be a real bottleneck. Here's h
 ```python
 class OptimizedTemplateEnvironment:
     """High-performance template environment for production use."""
-    
+
     def __init__(self):
         self.env = Environment(
             loader=FileSystemLoader('templates'),
@@ -568,19 +568,19 @@ class OptimizedTemplateEnvironment:
             optimized=True,
             finalize=self._finalize_output
         )
-        
+
         # Add custom filters and functions
         self._register_platform_filters()
         self._register_platform_functions()
-    
+
     def _register_platform_filters(self):
         """Register platform-specific filters."""
-        
+
         @self.env.filter
         def k8s_resource_name(value: str) -> str:
             """Convert to valid Kubernetes resource name."""
             return re.sub(r'[^a-z0-9-]', '-', value.lower()).strip('-')
-        
+
         @self.env.filter
         def cpu_millicores(value: Union[str, float]) -> str:
             """Convert CPU value to millicores."""
@@ -590,7 +590,7 @@ class OptimizedTemplateEnvironment:
                 else:
                     return f"{int(float(value) * 1000)}m"
             return f"{int(value * 1000)}m"
-        
+
         @self.env.filter
         def memory_mebibytes(value: Union[str, int]) -> str:
             """Convert memory value to MiB."""
@@ -600,7 +600,7 @@ class OptimizedTemplateEnvironment:
                 # Assume bytes
                 return f"{int(value) // (1024 * 1024)}Mi"
             return f"{value}Mi"
-        
+
         @self.env.filter
         def security_context(service_type: str) -> Dict[str, Any]:
             """Generate security context based on service type."""
@@ -620,28 +620,28 @@ class OptimizedTemplateEnvironment:
                 }
             }
             return contexts.get(service_type, contexts['web'])
-    
+
     def _register_platform_functions(self):
         """Register platform-specific global functions."""
-        
+
         @self.env.global_function
         def compute_replicas(request_rate: float, cpu_utilization: float) -> int:
             """Compute optimal replica count based on metrics."""
-            
+
             # Base calculation on request rate
             replicas_for_requests = max(1, int(request_rate / 100))  # 100 RPS per replica
-            
+
             # Adjust for CPU utilization
             if cpu_utilization > 0.7:
                 replicas_for_requests = int(replicas_for_requests * 1.5)
             elif cpu_utilization < 0.3:
                 replicas_for_requests = max(1, int(replicas_for_requests * 0.8))
-            
+
             # Ensure reasonable bounds
             return max(2, min(50, replicas_for_requests))
-        
+
         @self.env.global_function
-        def generate_labels(service_name: str, environment: str, 
+        def generate_labels(service_name: str, environment: str,
                           version: str, **kwargs) -> Dict[str, str]:
             """Generate standard labels for Kubernetes resources."""
             labels = {
@@ -653,14 +653,14 @@ class OptimizedTemplateEnvironment:
                 'app.kubernetes.io/managed-by': 'platform-templates',
                 'environment': environment
             }
-            
+
             # Add custom labels
             labels.update(kwargs.get('custom_labels', {}))
-            
+
             return labels
 ```
 
-See what's happening here? We're not just creating a template environment—we're creating a *platform-specific* template environment with custom filters and functions that encode our organization's specific logic and standards.
+See what's happening here? We're not just creating a template environment—we're creating a _platform-specific_ template environment with custom filters and functions that encode our organization's specific logic and standards.
 
 The `k8s_resource_name` filter ensures all resource names are Kubernetes-compliant. The `cpu_millicores` and `memory_mebibytes` filters handle the annoying unit conversions. The `security_context` filter automatically applies appropriate security settings based on service type.
 
@@ -733,7 +733,7 @@ Stop thinking about templates as "fancy find-and-replace." Start thinking about 
 
 ### What's Next?
 
-As we dive into Chapter 1's self-modifying code generation pipelines, you'll see how these architectural principles enable something truly revolutionary: templates that evolve and improve themselves based on real-world feedback. 
+As we dive into Chapter 1's self-modifying code generation pipelines, you'll see how these architectural principles enable something truly revolutionary: templates that evolve and improve themselves based on real-world feedback.
 
 We're not just talking about generating configuration files anymore. We're talking about infrastructure that learns, adapts, and gets better at its job over time. Templates that analyze their own performance and automatically optimize themselves. Code generation pipelines that incorporate feedback loops from production systems.
 

@@ -31,9 +31,9 @@ __license__ = "MIT"
 
 # Core exports - always available
 from .core import (
-    SmartTemplates,
-    SmartTemplateRegistry, 
     RenderError,
+    SmartTemplateRegistry,
+    SmartTemplates,
     TemplateErrorDetail,
 )
 
@@ -42,23 +42,22 @@ __all__ = [
     # Core classes
     "SmartTemplates",
     "SmartTemplateRegistry",
-    
     # Error handling
-    "RenderError", 
+    "RenderError",
     "TemplateErrorDetail",
-    
     # Package metadata
     "__version__",
 ]
+
 
 # Optional integrations - imported on demand to avoid hard dependencies
 def __getattr__(name: str) -> object:
     """
     Lazy import for optional integrations.
-    
+
     This allows importing optional components without requiring their dependencies
     to be installed unless actually used.
-    
+
     Example:
         >>> from smart_templates import SmartFastApiTemplates  # Only requires FastAPI if used
         >>> from smart_templates import SmartPytestTemplates   # Only requires pytest if used
@@ -66,33 +65,36 @@ def __getattr__(name: str) -> object:
     if name == "SmartFastApiTemplates":
         try:
             from .fastapi_integration import SmartFastApiTemplates
+
             return SmartFastApiTemplates
         except ImportError as e:
             raise ImportError(
                 "SmartFastApiTemplates requires FastAPI. Install with: "
                 "pip install smart-templates[fastapi]"
             ) from e
-    
+
     elif name == "create_smart_response":
         try:
             from .fastapi_integration import create_smart_response
+
             return create_smart_response
         except ImportError as e:
             raise ImportError(
                 "create_smart_response requires FastAPI. Install with: "
                 "pip install smart-templates[fastapi]"
             ) from e
-    
+
     elif name == "SmartPytestTemplates":
         try:
             from .pytest_integration import SmartPytestTemplates
+
             return SmartPytestTemplates
         except ImportError as e:
             raise ImportError(
                 "SmartPytestTemplates requires pytest. Install with: "
                 "pip install smart-templates[testing]"
             ) from e
-    
+
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
@@ -100,9 +102,11 @@ def __getattr__(name: str) -> object:
 if False:  # TYPE_CHECKING equivalent without typing import
     from .fastapi_integration import SmartFastApiTemplates, create_smart_response
     from .pytest_integration import SmartPytestTemplates
-    
-    __all__.extend([
-        "SmartFastApiTemplates",
-        "create_smart_response", 
-        "SmartPytestTemplates",
-    ])
+
+    __all__.extend(
+        [
+            "SmartFastApiTemplates",
+            "create_smart_response",
+            "SmartPytestTemplates",
+        ]
+    )

@@ -14,9 +14,9 @@ Key Features:
 - Multi-level object hierarchy for complex template testing
 """
 
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
-from typing import Any, List
+from typing import Any
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -24,14 +24,16 @@ from sqlmodel import Field, Relationship, SQLModel
 # Enums for business logic
 class EnrollmentStatus(str, Enum):
     """Student enrollment status for template selection."""
+
     ACTIVE = "active"
-    COMPLETED = "completed" 
+    COMPLETED = "completed"
     REATTEMPT = "reattempt"
     DROPPED = "dropped"
 
 
 class CourseStatus(str, Enum):
     """Course availability status."""
+
     DRAFT = "draft"
     ACTIVE = "active"
     ARCHIVED = "archived"
@@ -40,7 +42,7 @@ class CourseStatus(str, Enum):
 # Core Business Models
 class School(SQLModel, table=True):
     """School model with courses relationship."""
-    
+
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     address: str
@@ -52,12 +54,12 @@ class School(SQLModel, table=True):
     website: str | None = None
     established_year: int | None = None
     student_capacity: int = Field(default=500)
-    
+
     # Relationships
     # This list will be populated automatically by SQLModel when loading from DB
     # or needs manual appending in factory functions if building in-memory graphs.
-    courses: List["Course"] = Relationship(back_populates="school")
-    
+    courses: list["Course"] = Relationship(back_populates="school")
+
     def to_template_dict(self) -> dict[str, Any]:
         """Convert to template-friendly dictionary."""
         return {
@@ -75,12 +77,12 @@ class School(SQLModel, table=True):
             # 'courses' relationship should be populated for this to work in memory
             "total_courses": len(self.courses) if self.courses else 0,
         }
-    
+
     @property
     def full_address(self) -> str:
         """Complete address for display."""
         return f"{self.address}, {self.city}, {self.state} {self.zip_code}"
-    
+
     @property
     def total_students(self) -> int:
         """Total enrolled students across all courses."""
@@ -93,7 +95,7 @@ class School(SQLModel, table=True):
 
 class Course(SQLModel, table=True):
     """Course model with school and student relationships."""
-    
+
     id: int | None = Field(default=None, primary_key=True)
     title: str = Field(index=True)
     description: str
@@ -105,23 +107,25 @@ class Course(SQLModel, table=True):
     end_date: date | None = None
     instructor_name: str | None = None
     instructor_email: str | None = None
-    
+
     # Foreign Keys
     school_id: int | None = Field(default=None, foreign_key="school.id")
-    
+
     # Relationships
     school: School | None = Relationship(back_populates="courses")
     # This list needs manual appending in factory functions for in-memory graphs
-    enrollments: List["Enrollment"] = Relationship(back_populates="course")
-    
+    enrollments: list["Enrollment"] = Relationship(back_populates="course")
+
     @property
-    def students(self) -> List["Student"]:
+    def students(self) -> list["Student"]:
         """Get all students enrolled in this course."""
         if not self.enrollments:
             return []
         # 'enrollments' relationship should be populated for this to work in memory
-        return [enrollment.student for enrollment in self.enrollments if enrollment.student]
-    
+        return [
+            enrollment.student for enrollment in self.enrollments if enrollment.student
+        ]
+
     def to_template_dict(self) -> dict[str, Any]:
         """Convert to template-friendly dictionary."""
         return {
@@ -141,13 +145,13 @@ class Course(SQLModel, table=True):
             "enrolled_students": len(self.students),
             "available_spots": self.max_students - len(self.students),
         }
-    
+
     @property
     def is_full(self) -> bool:
         """Check if course is at capacity."""
         # 'students' property relies on 'enrollments' being populated
         return len(self.students) >= self.max_students
-    
+
     @property
     def enrollment_percentage(self) -> float:
         """Calculate enrollment percentage."""
@@ -159,7 +163,7 @@ class Course(SQLModel, table=True):
 
 class Student(SQLModel, table=True):
     """Student model with enrollment relationships."""
-    
+
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     email: str = Field(unique=True, index=True)
@@ -171,19 +175,21 @@ class Student(SQLModel, table=True):
     address: str | None = None
     emergency_contact: str | None = None
     emergency_phone: str | None = None
-    
+
     # Relationships
     # This list needs manual appending in factory functions for in-memory graphs
-    enrollments: List["Enrollment"] = Relationship(back_populates="student")
-    
+    enrollments: list["Enrollment"] = Relationship(back_populates="student")
+
     @property
-    def courses(self) -> List[Course]:
+    def courses(self) -> list[Course]:
         """Get all courses this student is enrolled in."""
         if not self.enrollments:
             return []
         # 'enrollments' relationship should be populated for this to work in memory
-        return [enrollment.course for enrollment in self.enrollments if enrollment.course]
-    
+        return [
+            enrollment.course for enrollment in self.enrollments if enrollment.course
+        ]
+
     def to_template_dict(self) -> dict[str, Any]:
         """Convert to template-friendly dictionary."""
         return {
@@ -191,7 +197,9 @@ class Student(SQLModel, table=True):
             "name": self.name,
             "email": self.email,
             "phone": self.phone,
-            "date_of_birth": self.date_of_birth.isoformat() if self.date_of_birth else None,
+            "date_of_birth": self.date_of_birth.isoformat()
+            if self.date_of_birth
+            else None,
             "graduation_year": self.graduation_year,
             "gpa": self.gpa,
             "major": self.major,
@@ -201,21 +209,25 @@ class Student(SQLModel, table=True):
             # 'courses' property relies on 'enrollments' being populated
             "total_courses": len(self.courses),
             # 'enrollments' relationship should be populated
-            "active_enrollments": len([e for e in self.enrollments if e.status == EnrollmentStatus.ACTIVE]),
-            "completed_courses": len([e for e in self.enrollments if e.status == EnrollmentStatus.COMPLETED]),
+            "active_enrollments": len(
+                [e for e in self.enrollments if e.status == EnrollmentStatus.ACTIVE]
+            ),
+            "completed_courses": len(
+                [e for e in self.enrollments if e.status == EnrollmentStatus.COMPLETED]
+            ),
         }
-    
+
     @property
-    def active_courses(self) -> List[Course]:
+    def active_courses(self) -> list[Course]:
         """Get courses with active enrollment."""
         return [
-            enrollment.course 
-            for enrollment in self.enrollments 
+            enrollment.course
+            for enrollment in self.enrollments
             if enrollment.status == EnrollmentStatus.ACTIVE and enrollment.course
         ]
-    
+
     @property
-    def completed_courses(self) -> List[Course]:
+    def completed_courses(self) -> list[Course]:
         """Get courses with completed enrollment."""
         return [
             enrollment.course
@@ -226,12 +238,12 @@ class Student(SQLModel, table=True):
 
 class Enrollment(SQLModel, table=True):
     """Enrollment relationship between students and courses."""
-    
+
     id: int | None = Field(default=None, primary_key=True)
     # student_id and course_id are required fields
     student_id: int = Field(foreign_key="student.id", index=True)
     course_id: int = Field(foreign_key="course.id", index=True)
-    
+
     status: EnrollmentStatus = Field(default=EnrollmentStatus.ACTIVE, index=True)
     enrollment_date: date = Field(default_factory=lambda: date.today())
     completion_date: date | None = None
@@ -239,13 +251,13 @@ class Enrollment(SQLModel, table=True):
     progress_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
     notes: str | None = None
     attempt_number: int = Field(default=1, ge=1)
-    
+
     # Relationships
     # FIX: Changed `Student | None` to `Student` and `Course | None` to `Course`
     # because `student_id` and `course_id` are non-nullable.
     student: Student = Relationship(back_populates="enrollments")
     course: Course = Relationship(back_populates="enrollments")
-    
+
     def to_template_dict(self) -> dict[str, Any]:
         """Convert to template-friendly dictionary."""
         return {
@@ -254,32 +266,33 @@ class Enrollment(SQLModel, table=True):
             "course_id": self.course_id,
             "status": self.status.value,
             "enrollment_date": self.enrollment_date.isoformat(),
-            "completion_date": self.completion_date.isoformat() if self.completion_date else None,
+            "completion_date": self.completion_date.isoformat()
+            if self.completion_date
+            else None,
             "grade": self.grade,
             "progress_percentage": self.progress_percentage,
             "notes": self.notes,
             "attempt_number": self.attempt_number,
-            "student_name": self.student.name, # No 'if self.student' needed due to non-nullable type
-            "course_title": self.course.title, # No 'if self.course' needed due to non-nullable type
-            "course_code": self.course.course_code, # No 'if self.course' needed due to non-nullable type
+            "student_name": self.student.name,  # No 'if self.student' needed due to non-nullable type
+            "course_title": self.course.title,  # No 'if self.course' needed due to non-nullable type
+            "course_code": self.course.course_code,  # No 'if self.course' needed due to non-nullable type
         }
-    
+
     @property
     def is_completed(self) -> bool:
         """Check if enrollment is completed."""
         return self.status == EnrollmentStatus.COMPLETED
-    
+
     @property
     def is_passing(self) -> bool:
         """Check if student is passing (based on progress)."""
         return self.progress_percentage >= 60.0
-    
+
     @property
     def needs_attention(self) -> bool:
         """Check if enrollment needs attention."""
-        return (
-            self.status == EnrollmentStatus.REATTEMPT or
-            (self.status == EnrollmentStatus.ACTIVE and self.progress_percentage < 50.0)
+        return self.status == EnrollmentStatus.REATTEMPT or (
+            self.status == EnrollmentStatus.ACTIVE and self.progress_percentage < 50.0
         )
 
 
@@ -321,7 +334,7 @@ def create_sample_course(
         end_date=date(2024, 12, 15),
         instructor_name="Dr. Sarah Johnson",
         instructor_email="s.johnson@university.edu",
-        school=school, # This links the Course to the School object
+        school=school,  # This links the Course to the School object
     )
 
 
@@ -333,7 +346,7 @@ def create_sample_student(
     """Create a sample student with realistic data."""
     if email is None:
         email = f"{name.lower().replace(' ', '.')}@student.university.edu"
-    
+
     return Student(
         name=name,
         email=email,
@@ -356,53 +369,57 @@ def create_sample_enrollment(
 ) -> Enrollment:
     """Create a sample enrollment with realistic data."""
     enrollment = Enrollment(
-        student=student, # This links the Enrollment to the Student object
-        course=course,   # This links the Enrollment to the Course object
+        student=student,  # This links the Enrollment to the Student object
+        course=course,  # This links the Enrollment to the Course object
         status=status,
         enrollment_date=date(2024, 8, 25),
         progress_percentage=progress,
         attempt_number=1,
     )
-    
+
     # Set completion data for completed enrollments
     if status == EnrollmentStatus.COMPLETED:
         enrollment.completion_date = date(2024, 12, 15)
         enrollment.grade = "A-" if progress >= 90 else "B+" if progress >= 80 else "B"
         enrollment.progress_percentage = 100.0
-    
+
     return enrollment
 
 
-def create_complete_test_data() -> tuple[List[School], List[Course], List[Student], List[Enrollment]]:
+def create_complete_test_data() -> (
+    tuple[list[School], list[Course], list[Student], list[Enrollment]]
+):
     """Create comprehensive test data with relationships."""
-    
+
     # Create schools
     schools = [
         create_sample_school("Tech University", "San Francisco", "CA"),
         create_sample_school("State College", "Austin", "TX"),
         create_sample_school("Community College", "Portland", "OR"),
     ]
-    
+
     # Create courses for each school
     courses = []
     course_name_data = [
         ("Introduction to Python", "CS101"),
         ("Web Development", "CS102"),
         ("Database Design", "CS201"),
-        ("Machine Learning", "CS301"), # Not all will be used
-        ("Software Engineering", "CS302"), # Not all will be used
+        ("Machine Learning", "CS301"),  # Not all will be used
+        ("Software Engineering", "CS302"),  # Not all will be used
     ]
-    
+
     for i, school in enumerate(schools):
-        school_suffix = str(i + 1) # A simple way to get a unique suffix per school
-        for j, (title, base_code) in enumerate(course_name_data[:3]): # 3 courses per school
+        school_suffix = str(i + 1)  # A simple way to get a unique suffix per school
+        for j, (title, base_code) in enumerate(
+            course_name_data[:3]
+        ):  # 3 courses per school
             # FIX: Changed course_code generation for uniqueness across schools
-            course_code = f"{base_code}-{school_suffix}-{j+1}" 
+            course_code = f"{base_code}-{school_suffix}-{j+1}"
             course = create_sample_course(title, course_code, school)
             courses.append(course)
             # FIX: Manually append course to school's courses list for in-memory graph
             school.courses.append(course)
-    
+
     # Create students
     student_data = [
         ("Alice Johnson", "Computer Science"),
@@ -414,12 +431,12 @@ def create_complete_test_data() -> tuple[List[School], List[Course], List[Studen
         ("Grace Lee", "Information Systems"),
         ("Henry Taylor", "Web Development"),
     ]
-    
+
     students = []
     for name, major in student_data:
         student = create_sample_student(name, major=major)
         students.append(student)
-    
+
     # Create enrollments (realistic distribution)
     enrollments = []
     enrollment_scenarios = [
@@ -432,46 +449,45 @@ def create_complete_test_data() -> tuple[List[School], List[Course], List[Studen
         (EnrollmentStatus.DROPPED, 25.0),
         (EnrollmentStatus.ACTIVE, 70.0),
     ]
-    
+
     # Enroll students in courses (multiple enrollments per student)
     course_index = 0
     for i, student in enumerate(students):
         # Each student enrolls in 2-3 courses, cycling through available courses
         num_courses_to_enroll = 2 if i % 3 == 0 else 3
-        
+
         for j in range(num_courses_to_enroll):
             if course_index >= len(courses):
-                course_index = 0 # Cycle back to the start of courses if we run out
-            
+                course_index = 0  # Cycle back to the start of courses if we run out
+
             course = courses[course_index]
-            
+
             # Use a scenario from the list, cycle if needed
             scenario_idx = (i * num_courses_to_enroll + j) % len(enrollment_scenarios)
             status, progress = enrollment_scenarios[scenario_idx]
-            
+
             enrollment = create_sample_enrollment(student, course, status, progress)
             enrollments.append(enrollment)
-            
+
             # FIX: Manually append enrollment to both student's and course's enrollment lists
             student.enrollments.append(enrollment)
             course.enrollments.append(enrollment)
-            
-            course_index += 1 # Move to the next course for the next enrollment
-    
+
+            course_index += 1  # Move to the next course for the next enrollment
+
     return schools, courses, students, enrollments
 
 
 # Utility Functions for Test Queries
-def get_schools_with_courses(schools: List[School]) -> List[School]:
+def get_schools_with_courses(schools: list[School]) -> list[School]:
     """Get schools that have courses."""
     # This relies on school.courses being populated, which the updated factory does.
     return [school for school in schools if school.courses]
 
 
 def get_students_by_status(
-    enrollments: List[Enrollment], 
-    status: EnrollmentStatus
-) -> List[Student]:
+    enrollments: list[Enrollment], status: EnrollmentStatus
+) -> list[Student]:
     """Get students by enrollment status."""
     students = []
     for enrollment in enrollments:
@@ -492,15 +508,15 @@ def get_course_enrollment_summary(course: Course) -> dict[str, Any]:
             "by_status": {},
             "average_progress": 0.0,
         }
-    
+
     by_status = {}
     total_progress = 0.0
-    
+
     for enrollment in course.enrollments:
         status = enrollment.status.value
         by_status[status] = by_status.get(status, 0) + 1
         total_progress += enrollment.progress_percentage
-    
+
     return {
         "course_id": course.id,
         "course_title": course.title,

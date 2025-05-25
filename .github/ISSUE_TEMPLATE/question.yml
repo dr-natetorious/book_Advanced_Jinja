@@ -1,0 +1,20 @@
+name: ❓ Question
+description: Ask a question about SmartTemplates or the book
+title: "[Question]: "
+labels: ["question"]
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: input
+    id: book_reference
+    attributes:
+      label: Book Reference
+      description: Which chapter/section is this related to?
+      placeholder: "Chapter 4"

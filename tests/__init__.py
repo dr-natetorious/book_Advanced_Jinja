@@ -17,7 +17,7 @@ Test Organization follows the Testing Pyramid:
 
 Pytest Markers:
 - @pytest.mark.unit: Unit tests (fast, isolated)
-- @pytest.mark.integration: Integration tests (slower)  
+- @pytest.mark.integration: Integration tests (slower)
 - @pytest.mark.slow: Long-running tests
 - @pytest.mark.business: Business scenario tests
 

@@ -1,0 +1,50 @@
+name: 🐛 Bug Report
+description: Report an issue with SmartTemplates
+title: "[Bug]: "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! This helps improve the book examples.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Example
+      description: Minimal code that shows the problem
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python Version
+      placeholder: "3.11"
+    validations:
+      required: true
+
+  - type: input
+    id: book_chapter
+    attributes:
+      label: Book Chapter/Section
+      description: Which part of the book were you following?
+      placeholder: "Chapter 3, Section 2"
