@@ -1,0 +1,110 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "smart-templates"
+dynamic = ["version"]
+description = "Framework-agnostic template engine with object-based template resolution, macro support, and specialized subclasses for FastAPI and pytest integration."
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Nate Bachmeier", email = "nate@bachmeier.dev"}
+]
+keywords = ["templates", "jinja2", "fastapi", "pytest", "orm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "jinja2>=3.1.4",
+    "pydantic>=2.11.0",
+]
+
+[project.optional-dependencies]
+fastapi = [
+    "fastapi[standard]>=0.115.0",
+]
+testing = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+]
+sqlmodel = [
+    "sqlmodel>=0.0.24",
+    "sqlalchemy>=2.0.36",
+]
+
+[project.urls]
+Homepage = "https://github.com/dr-natetorious/smart-templates"
+Repository = "https://github.com/dr-natetorious/smart-templates"
+Issues = "https://github.com/dr-natetorious/smart-templates/issues"
+
+[tool.hatch.version]
+path = "src/smart_templates/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/smart_templates"]
+
+# Ruff - replaces black, isort, flake8, pylint
+[tool.ruff]
+src = ["src"]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes  
+    "I",       # isort
+    "B",       # flake8-bugbear
+    "UP",      # pyupgrade
+    "SIM",     # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["S101"]  # allow assert in tests
+
+# Pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--cov=smart_templates",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+# MyPy
+[tool.mypy]
+files = ["src", "tests"]
+python_version = "3.10"
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true
+
+# Coverage
+[tool.coverage.run]
+source = ["smart_templates"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

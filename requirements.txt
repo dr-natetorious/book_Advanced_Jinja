@@ -1,0 +1,20 @@
+# SmartTemplates Framework Dependencies
+# Core template engine dependencies
+jinja2>=3.1.4
+pydantic>=2.11.0
+
+# FastAPI integration (recommended installation method)
+fastapi[standard]>=0.115.0
+
+# Database and ORM for business models
+sqlmodel>=0.0.24
+sqlalchemy>=2.0.36
+
+# Testing framework and utilities
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0
+
+# Development dependencies (optional - can be moved to dev group)
+ruff>=0.8.0  # Modern replacement for black, isort, flake8
+mypy>=1.13.0
