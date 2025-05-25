@@ -1,0 +1,43 @@
+{# Defines reusable macros for course-related UI components #}
+
+{% macro course_card(course) %}
+    <div class="card">
+        <h3>{% if course.title %}{{ course.title }}{% else %}Course Details{% endif %}</h3>
+        {% if course.course_code %}
+            <p><strong>Code:</strong> {{ course.course_code }}</p>
+        {% endif %}
+        {% if course.description %}
+            <p><strong>Description:</strong> {{ course.description }}</p>
+        {% endif %}
+        {% if course.instructor_name %}
+            <p><strong>Instructor:</strong> {{ course.instructor_name }}</p>
+        {% endif %}
+        {% if course.enrolled_students is not none and course.max_students is not none %}
+            <p><strong>Enrollment:</strong> {{ course.enrolled_students }} / {{ course.max_students }}</p>
+        {% endif %}
+        <p><a href="/courses/{{ course.id if course.id is not none else 'N/A' }}">View Course Details</a></p>
+    </div>
+{% endmacro %}
+
+{% macro progress_chart(course_or_enrollment) %}
+    {# Displays a simple progress bar. Can take a Course (for overall enrollment) or an Enrollment (for student-specific progress). #}
+    {% set percentage = 0 %}
+    {% set label = "Progress Missing" %}
+
+    {% if course_or_enrollment.enrollment_percentage is defined %}
+        {% set percentage = course_or_enrollment.enrollment_percentage %}
+        {% set label = "Overall Enrollment" %}
+    {% elif course_or_enrollment.progress_percentage is defined %}
+        {% set percentage = course_or_enrollment.progress_percentage %}
+        {% set label = "Your Progress" %}
+    {% endif %}
+
+    <div class="card" style="margin-top: 20px;">
+        <p><strong>{{ label }}:</strong> {{ "%.1f"|format(percentage) }}%</p>
+        <div style="background-color: #dee2e6; width: 100%; border-radius: 5px; height: 25px; overflow: hidden;">
+            <div style="background-color: #007bff; width: {{ percentage }}%; height: 100%; text-align: center; color: white; line-height: 25px; border-radius: 5px;">
+                {{ "%.1f"|format(percentage) }}%
+            </div>
+        </div>
+    </div>
+{% endmacro %}

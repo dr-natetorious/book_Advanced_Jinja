@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.title }} Detail{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "Courses", "url": "/courses"},
+        {"name": object.title}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object and object.title %}
+        <h1>{{ object.title }} ({{ object.course_code }})</h1>
+        <div class="card">
+            <h3>Course Overview</h3>
+            <p><strong>School:</strong> {% if object.school %}<a href="/schools/{{ object.school.id }}">{{ object.school.name }}</a>{% else %}N/A{% endif %}</p>
+            <p><strong>Description:</strong> {{ object.description }}</p>
+            <p><strong>Credits:</strong> {{ object.credits }}</p>
+            <p><strong>Instructor:</strong> {{ object.instructor_name }} ({{ object.instructor_email }})</p>
+            <p><strong>Dates:</strong> {{ object.start_date }} - {{ object.end_date }}</p>
+            <p><strong>Status:</strong>
+                {% if object.status == 'active' %}
+                    <span class="badge badge-success">{{ object.status }}</span>
+                {% elif object.status == 'draft' %}
+                    <span class="badge badge-info">{{ object.status }}</span>
+                {% else %}
+                    <span class="badge badge-warning">{{ object.status }}</span>
+                {% endif %}
+            </p>
+            <p><strong>Max Students:</strong> {{ object.max_students }}</p>
+            <p><strong>Currently Enrolled:</strong> {{ object.enrolled_students }} {% if object.is_full %}<span class="badge badge-danger">FULL</span>{% endif %}</p>
+        </div>
+
+        <h2>Enrolled Students</h2>
+        {% if object.students %}
+            <ul>
+                {% for student in object.students %}
+                    <li><a href="/students/{{ student.id }}">{{ student.name }}</a> ({{ student.email }})</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No students currently enrolled in this course.</p>
+        {% endif %}
+
+    {% else %}
+        <p>Course details not available.</p>
+    {% endif %}
+{% endblock %}

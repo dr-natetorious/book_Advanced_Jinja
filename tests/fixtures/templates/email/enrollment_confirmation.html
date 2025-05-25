@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Completion Certificate - {{ object.course.title if object.course else 'N/A' }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background-color: #f4f4f4;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <tr>
+            <td style="padding: 30px;">
+                <h1 style="color: #0056b3; font-size: 24px; text-align: center; margin-bottom: 20px;">Certificate of Completion</h1>
+                <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">This certifies that</p>
+                
+                {% if object is defined and object.student and object.course %}
+                    <h2 style="color: #0056b3; font-size: 28px; text-align: center; margin-bottom: 20px;">{{ object.student.name }}</h2>
+                    <p style="text-align: center; font-size: 18px; margin-bottom: 30px;">has successfully completed the course:</p>
+
+                    <h3 style="color: #0056b3; font-size: 22px; text-align: center; margin-bottom: 40px;">{{ object.course.title }} ({{ object.course.course_code }})</h3>
+                    
+                    <table width="100%" cellpadding="5" cellspacing="0" border="0" style="margin-bottom: 20px; border: 1px solid #eee;">
+                        <tr>
+                            <td width="40%" style="font-weight: bold; padding: 8px; background-color: #f9f9f9;">Completion Date:</td>
+                            <td width="60%" style="padding: 8px;">{{ object.completion_date if object.completion_date else 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding: 8px; background-color: #f9f9f9;">Instructor:</td>
+                            <td style="padding: 8px;">{{ object.course.instructor_name }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding: 8px; background-color: #f9f9f9;">Final Grade:</td>
+                            <td style="padding: 8px;">{{ object.grade if object.grade else 'N/A' }}</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: bold; padding: 8px; background-color: #f9f9f9;">Achieved Progress:</td>
+                            <td style="padding: 8px;">{{ "%.1f"|format(object.progress_percentage) }}%</td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-top: 30px; text-align: center;">Congratulations on your achievement! We wish you the best in your future endeavors.</p>
+                    <p style="text-align: center; margin-top: 40px;">
+                        <img src="https://via.placeholder.com/150x50?text=Signature" alt="University Signature" style="max-width: 150px; height: auto; display: block; margin: 0 auto 10px;">
+                        <strong>Dr. [Dean's Name]</strong><br>
+                        Dean of Academics<br>
+                        {{ object.course.school.name if object.course.school else 'Our University' }}
+                    </p>
+                {% else %}
+                    <p style="text-align: center;">Dear Student,</p>
+                    <p style="text-align: center;">We are unable to generate your completion certificate at this time. Please contact support for assistance.</p>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+    <div style="text-align: center; font-size: 12px; color: #777; margin-top: 20px;">
+        <p>&copy; {{ "now"|date("Y") }} SmartTemplates University. All rights reserved.</p>
+        <p>This is an automated email, please do not reply.</p>
+    </div>
+</body>
+</html>

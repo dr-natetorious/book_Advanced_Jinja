@@ -1,0 +1,43 @@
+{# Defines reusable macros for student-related UI components #}
+
+{% macro student_card(student) %}
+    <div class="card">
+        <h3>{% if student.name %}{{ student.name }}{% else %}Student Details{% endif %}</h3>
+        {% if student.email %}
+            <p><strong>Email:</strong> {{ student.email }}</p>
+        {% endif %}
+        {% if student.major %}
+            <p><strong>Major:</strong> {{ student.major }}</p>
+        {% endif %}
+        {% if student.gpa is not none %}
+            <p><strong>GPA:</strong> {{ "%.2f"|format(student.gpa) }}</p>
+        {% endif %}
+        {% if student.phone %}
+            <p><strong>Phone:</strong> {{ student.phone }}</p>
+        {% endif %}
+        {% if student.total_courses is not none %}
+            <p><strong>Total Courses Enrolled:</strong> {{ student.total_courses }}</p>
+        {% endif %}
+        <p><a href="/students/{{ student.id if student.id is not none else 'N/A' }}">View Full Profile</a></p>
+    </div>
+{% endmacro %}
+
+{% macro status_badge(enrollment) %}
+    {# A badge showing the enrollment status of a given enrollment object #}
+    {% if enrollment.status is defined %}
+        {% set status_val = enrollment.status.value if enrollment.status.value is defined else enrollment.status %}
+        {% if status_val == 'active' %}
+            <span class="badge badge-success" title="Currently enrolled and making progress">Active</span>
+        {% elif status_val == 'completed' %}
+            <span class="badge badge-primary" title="Course successfully completed">Completed</span>
+        {% elif status_val == 'reattempt' %}
+            <span class="badge badge-warning" title="Required to reattempt the course">Reattempt</span>
+        {% elif status_val == 'dropped' %}
+            <span class="badge badge-danger" title="Course was dropped">Dropped</span>
+        {% else %}
+            <span class="badge badge-secondary" title="Unknown status">Unknown</span>
+        {% endif %}
+    {% else %}
+        <span class="badge badge-secondary" title="Status not provided">N/A</span>
+    {% endif %}
+{% endmacro %}

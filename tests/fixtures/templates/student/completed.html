@@ -1,0 +1,15 @@
+{# This template is intended to be a small reusable snippet, e.g., for badges #}
+{# It should be rendered with an 'object' context that is an 'Enrollment' instance #}
+{# or a 'student' instance that has completed courses. #}
+{% if object is defined %}
+    {% if object.status is defined and object.status == 'completed' %}
+        <span class="badge badge-primary">{{ object.status.value if object.status.value is defined else object.status }}</span>
+    {% elif object.completed_courses is defined and object.completed_courses|length > 0 %}
+        <span class="badge badge-primary">Completed (Student)</span>
+    {% else %}
+        {# Fallback for testing if object context is not ideal for this usage #}
+        <span class="badge badge-secondary">Completed (Generic)</span>
+    {% endif %}
+{% else %}
+    <span class="badge badge-secondary">Completed (N/A)</span>
+{% endif %}

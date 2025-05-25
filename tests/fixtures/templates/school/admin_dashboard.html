@@ -1,6 +1,83 @@
-# tests/fixtures/templates/school/admin_dashboard.html
 {% extends "base.html" %}
-{% from "macros/navigation.html" import breadcrumb_nav %}
 
-{% block title %}{{ object.name }} - Admin Dashboard{% endblock %}
-{% block page_title %}{{ object.name }} - Administrative Dashboard{% endblock %}
+{% block title %}School Admin Dashboard{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "Schools", "url": "/schools"},
+        {"name": object.name, "url": "/schools/" ~ object.id},
+        {"name": "Admin Dashboard", "url": "/schools/" ~ object.id ~ "/admin_dashboard"}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object and object.name %}
+        <h1>Admin Dashboard for {{ object.name }}</h1>
+        <div class="card">
+            <h3>Administrative Overview</h3>
+            <p><strong>Established:</strong> {{ object.established_year }}</p>
+            <p><strong>Student Capacity:</strong> {{ object.student_capacity }}</p>
+            <p><strong>Current Student Count:</strong> {{ object.total_students }}</p>
+            <p><strong>Capacity Utilization:</strong> {{ "%.2f"|format((object.total_students / object.student_capacity) * 100) }}%</p>
+            <p><strong>Contact Email:</strong> {{ object.email }}</p>
+            <p><strong>Website:</strong> <a href="{{ object.website }}">{{ object.website }}</a></p>
+        </div>
+
+        <h2>Course Management</h2>
+        {% if object.courses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Code</th>
+                        <th>Max Students</th>
+                        <th>Enrolled</th>
+                        <th>% Full</th>
+                        <th>Status</th>
+                        <th>Instructor</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in object.courses %}
+                    <tr>
+                        <td>{{ course.title }}</td>
+                        <td>{{ course.course_code }}</td>
+                        <td>{{ course.max_students }}</td>
+                        <td>{{ course.enrolled_students }}</td>
+                        <td>{{ "%.2f"|format(course.enrollment_percentage) }}%</td>
+                        <td>
+                            {% if course.status == 'active' %}
+                                <span class="badge badge-success">{{ course.status }}</span>
+                            {% elif course.status == 'draft' %}
+                                <span class="badge badge-info">{{ course.status }}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ course.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ course.instructor_name }}</td>
+                        <td>
+                            <a href="/courses/{{ course.id }}/edit">Edit</a> |
+                            <a href="/courses/{{ course.id }}/delete">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No courses are currently registered for this school.</p>
+        {% endif %}
+
+        <h2>Recent Student Enrollments</h2>
+        <p><em>(This section would typically query recent enrollments, not directly available from `object.courses` in this dummy data structure, but for demonstration purposes, imagine it's here.)</em></p>
+        {# In a real app, you'd fetch this data separately perhaps via an API call #}
+        <div class="card">
+            <p>Placeholder for dynamic recent student enrollments list. Maximize insights here.</p>
+        </div>
+
+    {% else %}
+        <p>Admin data for this school not available.</p>
+    {% endif %}
+{% endblock %}

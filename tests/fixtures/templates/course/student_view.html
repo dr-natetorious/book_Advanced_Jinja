@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}{{ object.course.title }} - Student View{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "My Courses", "url": "/students/" ~ object.student.id ~ "/courses"},
+        {"name": object.course.title}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object.student and object.course %}
+        <h1>Student View: {{ object.course.title }}</h1>
+        <p><strong>Enrolled Student:</strong> <a href="/students/{{ object.student.id }}">{{ object.student.name }}</a></p>
+        <p><strong>Course Code:</strong> {{ object.course.course_code }}</p>
+        <p><strong>Instructor:</strong> {{ object.course.instructor_name }}</p>
+        <p><strong>Your Current Status:</strong>
+            {% if object.status == 'active' %}
+                <span class="badge badge-success">{{ object.status }}</span>
+            {% elif object.status == 'completed' %}
+                <span class="badge badge-primary">{{ object.status }}</span>
+            {% elif object.status == 'reattempt' %}
+                <span class="badge badge-warning">{{ object.status }}</span>
+            {% else %}
+                <span class="badge badge-danger">{{ object.status }}</span>
+            {% endif %}
+        </p>
+
+        <h2>Your Progress</h2>
+        <div class="card">
+            <p><strong>Progress Percentage:</strong> {{ "%.1f"|format(object.progress_percentage) }}%</p>
+            <div style="background-color: lightgray; width: 100%; height: 20px; border-radius: 10px; margin-top: 10px;">
+                <div style="background-color: #007bff; width: {{ object.progress_percentage }}%; height: 100%; border-radius: 10px;"></div>
+            </div>
+            {% if object.status == 'completed' %}
+                <p><strong>Final Grade:</strong> {{ object.grade if object.grade else 'N/A' }}</p>
+                <p><strong>Completion Date:</strong> {{ object.completion_date }}</p>
+            {% elif object.status == 'active' %}
+                <p>Keep up the great work! You are currently on track for a good grade.</p>
+            {% elif object.status == 'reattempt' %}
+                <p style="color: red;">You are reattempting this course. Focus on improving your progress!</p>
+            {% elif object.status == 'dropped' %}
+                <p style="color: grey;">You have dropped this course.</p>
+            {% endif %}
+        </div>
+
+        <h3>Course Description</h3>
+        <div class="card">
+            <p>{{ object.course.description }}</p>
+        </div>
+
+    {% else %}
+        <p>Enrollment details not available for student view.</p>
+    {% endif %}
+{% endblock %}

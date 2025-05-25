@@ -1,65 +1,46 @@
-
-# tests/fixtures/templates/base.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SmartTemplates Test{% endblock %}</title>
+    <title>{% block title %}SmartTemplates{% endblock %}</title>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; padding: 20px; background: #f5f5f5; 
-        }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-        .header { border-bottom: 2px solid #007bff; margin-bottom: 20px; padding-bottom: 10px; }
-        .content { min-height: 400px; }
-        .footer { border-top: 1px solid #ddd; margin-top: 20px; padding-top: 10px; color: #666; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
-        .badge-active { background: #28a745; color: white; }
-        .badge-completed { background: #6c757d; color: white; }
-        .badge-reattempt { background: #ffc107; color: black; }
-        .badge-dropped { background: #dc3545; color: white; }
-        .card { border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin: 10px 0; }
-        .btn { padding: 8px 16px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-        .btn:hover { background: #0056b3; }
-        .table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        .table th { background: #f8f9fa; font-weight: 600; }
-        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin: 10px 0; }
-        .debug-info pre { margin: 0; font-size: 0.9em; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        header { background-color: #0056b3; color: white; padding: 1em; text-align: center; }
+        nav { background-color: #e2e6ea; padding: 0.5em; text-align: center; }
+        nav a { margin: 0 1em; text-decoration: none; color: #0056b3; }
+        main { padding: 2em; max-width: 960px; margin: 20px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        footer { text-align: center; padding: 1em; background-color: #0056b3; color: white; position: relative; bottom: 0; width: 100%; }
+        h1, h2, h3 { color: #0056b3; }
+        .container { margin: 0 auto; padding: 20px; }
+        .card { background-color: #e9ecef; border: 1px solid #ced4da; border-radius: 5px; padding: 15px; margin-bottom: 15px; }
+        .badge { display: inline-block; padding: .25em .4em; font-size: 75%; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+        .badge-success { color: #fff; background-color: #28a745; }
+        .badge-warning { color: #212529; background-color: #ffc107; }
+        .badge-danger { color: #fff; background-color: #dc3545; }
+        .badge-info { color: #fff; background-color: #17a2b8; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
     </style>
-    {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            {% block header %}
-            <h1>{% block page_title %}SmartTemplates Test Application{% endblock %}</h1>
-            {% endblock %}
-        </header>
-        
-        <main class="content">
-            {% block content %}
-            <p>Base template - content should be overridden</p>
-            {% endblock %}
-        </main>
-        
-        <footer class="footer">
-            {% block footer %}
-            <p>Generated at {{ current_time.strftime('%Y-%m-%d %H:%M:%S') if current_time else 'Unknown time' }} 
-               {% if debug_mode %}| Debug Mode: ON{% endif %}</p>
-            {% endblock %}
-        </footer>
-        
-        {% if debug_mode and debug_info %}
-        <div class="debug-info">
-            <strong>Debug Information:</strong>
-            <pre>{{ debug_info | pprint }}</pre>
-        </div>
-        {% endif %}
-    </div>
-    
-    {% block extra_scripts %}{% endblock %}
+    <header>
+        <h1>SmartTemplates Demo</h1>
+    </header>
+    <nav>
+        {% block navigation %}
+            {% from 'macros/navigation.html' import breadcrumbs %}
+            {{ breadcrumbs(path_segments) }}
+        {% endblock %}
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2024 SmartTemplates Project. All rights reserved.</p>
+    </footer>
 </body>
 </html>

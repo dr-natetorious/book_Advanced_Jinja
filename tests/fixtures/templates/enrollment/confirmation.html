@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Enrollment Confirmation{% endblock %}
+
+{% block content %}
+    {% if object is defined and object.student and object.course %}
+        <h1>Enrollment Confirmation</h1>
+        <div class="card">
+            <p>Dear <strong>{{ object.student.name }}</strong>,</p>
+            <p>This email confirms your enrollment in the following course:</p>
+
+            <ul>
+                <li><strong>Course Title:</strong> {{ object.course.title }}</li>
+                <li><strong>Course Code:</strong> {{ object.course.course_code }}</li>
+                <li><strong>Instructor:</strong> {{ object.course.instructor_name }}</li>
+                <li><strong>Enrollment Date:</strong> {{ object.enrollment_date }}</li>
+                <li><strong>Current Status:</strong> <span class="badge badge-success">{{ object.status.value if object.status.value is defined else object.status }}</span></li>
+            </ul>
+
+            <p>You can view your course details and progress on your student dashboard: <a href="/students/{{ object.student.id }}/profile">Go to Dashboard</a></p>
+            <p>If you have any questions, please contact our academic advising office.</p>
+            <p>Thank you for choosing {{ object.course.school.name if object.course.school else 'our institution' }}!</p>
+        </div>
+    {% else %}
+        <p>Enrollment confirmation details are not available. Please check your enrollment records.</p>
+    {% endif %}
+{% endblock %}

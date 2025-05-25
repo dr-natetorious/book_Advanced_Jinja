@@ -1,0 +1,13 @@
+{# This template is intended to be a small reusable snippet, e.g., for badges #}
+{# It should be rendered with an 'object' context that is an 'Enrollment' instance #}
+{# or a 'student' instance that has reattempt enrollments. #}
+{% if object is defined %}
+    {% if object.status is defined and object.status == 'reattempt' %}
+        <span class="badge badge-warning">{{ object.status.value if object.status.value is defined else object.status }}</span>
+    {% else %}
+        {# Fallback for testing if object context is not ideal for this usage #}
+        <span class="badge badge-light">Reattempt (Generic)</span>
+    {% endif %}
+{% else %}
+    <span class="badge badge-light">Reattempt (N/A)</span>
+{% endif %}

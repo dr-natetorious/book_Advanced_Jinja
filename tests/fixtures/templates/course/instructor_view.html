@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% import "macros/course_components.html" as course_macros %}
+{% import "macros/student_components.html" as student_macros %}
+
+{% block title %}{{ object.title }} - Instructor View{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "Courses", "url": "/courses"},
+        {"name": object.title, "url": "/courses/" ~ object.id},
+        {"name": "Instructor View"}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object and object.title %}
+        <h1>Instructor View: {{ object.title }} ({{ object.course_code }})</h1>
+        <div class="card">
+            <h3>Course Summary for Instructor</h3>
+            <p><strong>Instructor:</strong> {{ object.instructor_name }}</p>
+            <p><strong>Description:</strong> {{ object.description }}</p>
+            <p><strong>Total Enrolled:</strong> {{ object.enrolled_students }} / {{ object.max_students }}</p>
+            <p><strong>Enrollment Percentage:</strong> {{ "%.2f"|format(object.enrollment_percentage) }}%</p>
+            {{ course_macros.progress_chart(object) }} {# Macro for overall course progress #}
+        </div>
+
+        <h2>Student Enrollments</h2>
+        {% if object.enrollments %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Email</th>
+                        <th>Enrollment Status</th>
+                        <th>Progress (%)</th>
+                        <th>Grade</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in object.enrollments %}
+                    <tr>
+                        <td><a href="/students/{{ enrollment.student.id }}">{{ enrollment.student.name }}</a></td>
+                        <td>{{ enrollment.student.email }}</td>
+                        <td>{{ student_macros.status_badge(enrollment) }}</td> {# Macro for status badge #}
+                        <td>
+                            <div style="background-color: lightgray; width: 100px; height: 15px; border-radius: 5px;">
+                                <div style="background-color: #007bff; width: {{ enrollment.progress_percentage }}%; height: 100%; border-radius: 5px;"></div>
+                            </div>
+                            <small>{{ "%.1f"|format(enrollment.progress_percentage) }}%</small>
+                        </td>
+                        <td>{{ enrollment.grade if enrollment.grade else 'N/A' }}</td>
+                        <td><a href="/enrollments/{{ enrollment.id }}">Details</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No students are currently enrolled in this course according to the enrollment records.</p>
+        {% endif %}
+
+    {% else %}
+        <p>Course data not available for instructor view.</p>
+    {% endif %}
+{% endblock %}

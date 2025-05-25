@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% import "macros/student_components.html" as student_macros %}
+
+{% block title %}{{ object.name }}'s Profile{% endblock %}
+
+{% block navigation %}
+    {% set path_segments = [
+        {"name": "Home", "url": "/"},
+        {"name": "Students", "url": "/students"},
+        {"name": object.name, "url": "/students/" ~ object.id},
+        {"name": "Profile"}
+    ] %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if object is defined and object and object.name %}
+        <h1>{{ object.name }}'s Profile</h1>
+
+        {{ student_macros.student_card(object) }}
+
+        <h2>Active Courses ({{ object.active_courses|length }})</h2>
+        {% if object.active_courses %}
+            <ul>
+                {% for course in object.active_courses %}
+                    <li><a href="/courses/{{ course.id }}/student_view">{{ course.title }} ({{ course.course_code }})</a> - Instructor: {{ course.instructor_name }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No active courses found.</p>
+        {% endif %}
+
+        <h2>Completed Courses ({{ object.completed_courses|length }})</h2>
+        {% if object.completed_courses %}
+            <ul>
+                {% for course in object.completed_courses %}
+                    <li><a href="/courses/{{ course.id }}/student_view">{{ course.title }} ({{ course.course_code }})</a> - Completed</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No completed courses found.</p>
+        {% endif %}
+
+        <p><a href="/students/{{ object.id }}/transcript">View Full Transcript</a></p>
+
+    {% else %}
+        <p>Student profile not available.</p>
+    {% endif %}
+{% endblock %}
