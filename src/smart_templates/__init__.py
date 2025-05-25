@@ -93,7 +93,7 @@ def __getattr__(name: str) -> object:
                 "pip install smart-templates[testing]"
             ) from e
     
-    raise AttributeError(f"module '{__name__}' has no attribute '{name__}'")
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
 # For IDEs and static analysis - these will be available when dependencies are installed

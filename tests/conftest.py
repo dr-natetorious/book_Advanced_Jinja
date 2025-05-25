@@ -20,26 +20,31 @@ from smart_templates.fastapi_integration import SmartFastApiTemplates, create_sm
 # Import test directory constants
 from tests import TEST_TEMPLATES_DIR, TEST_DATA_DIR, TEST_OUTPUT_DIR
 
-# Import test models - these would be defined in tests/models/test_sqlmodel_objects.py
+# Import test models - corrected import path
 try:
-    from tests.models.test_sqlmodel_objects import (
+    from tests.models.business_objects import (
         Course,
         CourseStatus,
         Enrollment,
         EnrollmentStatus,
         School,
         Student,
-        create_sample_courses,
-        create_sample_enrollments,
-        create_sample_schools,
-        create_sample_students,
+        create_complete_test_data,
+        create_sample_course,
+        create_sample_enrollment,
+        create_sample_school,
+        create_sample_student,
     )
+    
+    models_available = True
 except ImportError:
     # Handle case where test models aren't available yet
     School = Course = Student = Enrollment = None
     EnrollmentStatus = CourseStatus = None
-    create_sample_schools = create_sample_courses = None
-    create_sample_students = create_sample_enrollments = None
+    create_complete_test_data = None
+    create_sample_school = create_sample_course = None
+    create_sample_student = create_sample_enrollment = None
+    models_available = False
 
 
 @pytest.fixture
@@ -99,11 +104,12 @@ def _create_minimal_templates(templates_dir: Path) -> None:
 {% block title %}{{ object.name }} Dashboard{% endblock %}
 {% block content %}
 <h1>{{ object.name }}</h1>
-<p>Address: {{ object.address }}</p>
+<p>Address: {{ object.full_address }}</p>
+<p>Total Students: {{ object.total_students }}</p>
 <h2>Courses ({{ object.courses | length }})</h2>
 <ul>
 {% for course in object.courses %}
-    <li>{{ course.title }}</li>
+    <li>{{ course.title }} ({{ course.course_code }})</li>
 {% endfor %}
 </ul>
 {% endblock %}"""
@@ -116,13 +122,13 @@ def _create_minimal_templates(templates_dir: Path) -> None:
 <h1>All Schools</h1>
 <ul>
 {% for school in schools %}
-    <li>{{ school.name }} - {{ school.address }}</li>
+    <li>{{ school.name }} - {{ school.city }}, {{ school.state }}</li>
 {% endfor %}
 </ul>
 {% endblock %}"""
     )
     
-    # Student templates
+    # Student templates with status variations
     student_dir = templates_dir / "student"
     student_dir.mkdir(exist_ok=True)
     
@@ -132,12 +138,44 @@ def _create_minimal_templates(templates_dir: Path) -> None:
 {% block content %}
 <h1>{{ object.name }}</h1>
 <p>Email: {{ object.email }}</p>
+<p>Major: {{ object.major }}</p>
+<p>GPA: {{ object.gpa }}</p>
 <h2>Enrollments</h2>
 <ul>
 {% for enrollment in object.enrollments %}
-    <li>{{ enrollment.course.title }} - {{ enrollment.status }}</li>
+    <li>{{ enrollment.course.title }} - Status: {{ enrollment.status }} ({{ enrollment.progress_percentage }}%)</li>
 {% endfor %}
 </ul>
+{% endblock %}"""
+    )
+    
+    # Status-specific student templates
+    (student_dir / "active.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}Active Student: {{ object.name }}{% endblock %}
+{% block content %}
+<h1>{{ object.name }} - Active Status</h1>
+<p>Currently enrolled in {{ object.active_courses | length }} courses</p>
+<div class="alert alert-success">Student is actively participating</div>
+{% endblock %}"""
+    )
+    
+    (student_dir / "completed.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}Graduate: {{ object.name }}{% endblock %}
+{% block content %}
+<h1>{{ object.name }} - Completed</h1>
+<p>Successfully completed {{ object.completed_courses | length }} courses</p>
+<div class="alert alert-info">Student has graduated</div>
+{% endblock %}"""
+    )
+    
+    (student_dir / "reattempt.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}{{ object.name }} - Needs Support{% endblock %}
+{% block content %}
+<h1>{{ object.name }} - Reattempt Status</h1>
+<div class="alert alert-warning">Student needs additional support</div>
 {% endblock %}"""
     )
 
@@ -147,19 +185,22 @@ def smart_registry() -> SmartTemplateRegistry:
     """Create a SmartTemplateRegistry with test configurations."""
     registry = SmartTemplateRegistry()
     
-    # Register some test template mappings
-    if School:
+    # Register template mappings if models are available
+    if models_available:
+        # School templates
         registry.register(School, template_name="school/dashboard.html")
         registry.register(School, template_name="school/list.html", variation="list")
-    
-    if Student:
+        
+        # Student templates with status variations
         registry.register(Student, template_name="student/profile.html")
         registry.register(Student, template_name="student/active.html", variation=EnrollmentStatus.ACTIVE)
         registry.register(Student, template_name="student/completed.html", variation=EnrollmentStatus.COMPLETED)
-    
-    if Course:
+        registry.register(Student, template_name="student/reattempt.html", variation=EnrollmentStatus.REATTEMPT)
+        
+        # Course templates
         registry.register(Course, template_name="course/detail.html")
         registry.register(Course, template_name="course/instructor_view.html", variation="instructor")
+        registry.register(Course, template_name="course/student_view.html", variation="student")
     
     return registry
 
@@ -216,39 +257,55 @@ def smart_pytest_templates(
 
 
 @pytest.fixture
-def sample_schools() -> list[Any]:
-    """Create sample school objects for testing."""
-    if create_sample_schools:
-        return create_sample_schools(count=3)
-    return []
+def sample_test_data() -> tuple[list[Any], list[Any], list[Any], list[Any]]:
+    """Create complete sample test data using factory functions."""
+    if models_available and create_complete_test_data:
+        return create_complete_test_data()
+    return [], [], [], []
 
 
 @pytest.fixture
-def sample_courses(sample_schools: list[Any]) -> list[Any]:
-    """Create sample course objects for testing."""
-    if create_sample_courses and sample_schools:
-        return create_sample_courses(schools=sample_schools, courses_per_school=2)
-    return []
+def sample_schools(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+    """Extract sample schools from complete test data."""
+    schools, _, _, _ = sample_test_data
+    return schools
 
 
 @pytest.fixture
-def sample_students() -> list[Any]:
-    """Create sample student objects for testing."""
-    if create_sample_students:
-        return create_sample_students(count=5)
-    return []
+def sample_courses(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+    """Extract sample courses from complete test data."""
+    _, courses, _, _ = sample_test_data
+    return courses
 
 
 @pytest.fixture
-def sample_enrollments(sample_students: list[Any], sample_courses: list[Any]) -> list[Any]:
-    """Create sample enrollment objects for testing."""
-    if create_sample_enrollments and sample_students and sample_courses:
-        return create_sample_enrollments(
-            students=sample_students,
-            courses=sample_courses,
-            enrollments_per_student=2
-        )
-    return []
+def sample_students(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+    """Extract sample students from complete test data."""
+    _, _, students, _ = sample_test_data
+    return students
+
+
+@pytest.fixture
+def sample_enrollments(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+    """Extract sample enrollments from complete test data."""
+    _, _, _, enrollments = sample_test_data
+    return enrollments
+
+
+@pytest.fixture
+def sample_school() -> Any:
+    """Create a single sample school for testing."""
+    if models_available and create_sample_school:
+        return create_sample_school("Test University", "San Francisco", "CA")
+    return None
+
+
+@pytest.fixture
+def sample_student() -> Any:
+    """Create a single sample student for testing."""
+    if models_available and create_sample_student:
+        return create_sample_student("John Doe", major="Computer Science")
+    return None
 
 
 @pytest.fixture
@@ -260,45 +317,39 @@ def test_fastapi_app(smart_fastapi_templates: SmartFastApiTemplates) -> FastAPI:
     smart_response = create_smart_response(smart_fastapi_templates)
     
     @app.get("/")
-    async def root():
+    async def root(request):
         return {"message": "Hello from SmartTemplates test app"}
     
     @app.get("/health")
-    async def health():
+    async def health(request):
         return {"status": "healthy", "service": "smarttemplates-test"}
     
-    if School:
+    # Add business routes if models are available
+    if models_available:
         @app.get("/schools/{school_id}")
         @smart_response("school/dashboard.html")
         async def get_school(request, school_id: int):
-            # This would normally fetch from database
-            school = School(
-                id=school_id,
-                name=f"Test School {school_id}",
-                address=f"123 Test St, City {school_id}",
-                courses=[]
-            )
+            # Create a test school with realistic data
+            school = create_sample_school(f"Test School {school_id}", "Test City", "CA")
+            school.id = school_id
             return school
         
         @app.get("/schools")
         @smart_response("school/list.html")
         async def list_schools(request):
             schools = [
-                School(id=1, name="Test School 1", address="123 Test St", courses=[]),
-                School(id=2, name="Test School 2", address="456 Demo Ave", courses=[]),
+                create_sample_school("Tech University", "San Francisco", "CA"),
+                create_sample_school("State College", "Austin", "TX"),
             ]
+            for i, school in enumerate(schools, 1):
+                school.id = i
             return {"schools": schools}
-    
-    if Student:
+        
         @app.get("/students/{student_id}")
         @smart_response("student/profile.html")
         async def get_student(request, student_id: int):
-            student = Student(
-                id=student_id,
-                name=f"Test Student {student_id}",
-                email=f"student{student_id}@test.com",
-                enrollments=[]
-            )
+            student = create_sample_student(f"Test Student {student_id}", major="Computer Science")
+            student.id = student_id
             return student
     
     return app

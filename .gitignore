@@ -1,0 +1,138 @@
+# This .gitignore file is for a new, modern Python 3.13 project.
+# It covers common files and directories that should not be committed to Git.
+
+# -----------------------------------------------------------------------------
+# Python related ignored files/directories
+# -----------------------------------------------------------------------------
+
+# Byte-code files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# C extensions (often built into the source tree)
+*.so
+*.dylib
+
+# Distribution / packaging
+# Eg. setuptools, wheel build directories.
+/dist/
+/build/
+*.egg-info/
+*.egg
+*.whl
+
+# Virtual environments
+# Modern Python projects heavily rely on virtual environments.
+# These directories contain interpreter binaries, installed packages, etc.
+# Common names for virtual environments:
+venv/
+.venv/
+env/
+.env/
+.direnv/  # For direnv (environment management)
+
+# Tools that create specific virtual env directories
+.nox/     # nox (automation tool)
+.tox/     # tox (automation tool)
+
+# Python installer/dependency manager specific ignored files
+# If you're using Pipenv:
+Pipfile.lock
+# If you're using Poetry:
+poetry.lock
+# If you're using PDM:
+pdm.lock
+
+# Python testing and linting tools
+.pytest_cache/      # pytest's cache
+.mypy_cache/        # mypy's type checking cache
+.ruff_cache/        # Ruff's cache (formatter/linter)
+.hypothesis/        # Hypothesis (property-based testing)
+.coverage           # Coverage report file
+htmlcov/            # HTML coverage reports
+.benchmarks         # Some benchmarking tools
+
+# Jupyter Notebook files
+.ipynb_checkpoints/
+*.ipynb-filter/
+
+# -----------------------------------------------------------------------------
+# IDE and editor specific ignored files/directories
+# -----------------------------------------------------------------------------
+
+# VS Code
+.vscode/
+# Add common VS Code cache/temp files here, but generally
+# you might want to keep some .vscode/ config files like settings.json,
+# launch.json, tasks.json if they are project-specific.
+# If you want to commit some VS Code files, uncomment and negate them:
+# !.vscode/settings.json
+# !.vscode/launch.json
+# !.vscode/tasks.json
+# !.vscode/extensions.json
+
+# JetBrains (PyCharm, IntelliJ IDEA, WebStorm, etc.)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*.swn
+*.bak
+*.netrwc
+
+# Emacs
+*~
+#*#
+.#*
+
+# -----------------------------------------------------------------------------
+# Operating System specific ignored files
+# -----------------------------------------------------------------------------
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# -----------------------------------------------------------------------------
+# Common temporary and log files
+# -----------------------------------------------------------------------------
+
+*.log
+*.tmp
+tmp/
+temp/
+
+# -----------------------------------------------------------------------------
+# Environment variables and sensitive data
+# -----------------------------------------------------------------------------
+
+# .env file (for local environment variables) - CRUCIAL to ignore due to sensitive data
+.env
+
+# Any specific config files that might contain sensitive data
+# For example, a local database file:
+# db.sqlite3
+# local_settings.py
+
+# Cryptographic keys, certificates etc.
+*.key
+*.pem
+*.crt
+.coverage
