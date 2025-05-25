@@ -1,0 +1,83 @@
+# tests/fixtures/templates/school/list.html
+{% extends "base.html" %}
+{% from "macros/navigation.html" import breadcrumb_nav %}
+
+{% block title %}Schools Directory{% endblock %}
+{% block page_title %}Schools Directory{% endblock %}
+
+{% block content %}
+{{ breadcrumb_nav([{"name": "Schools", "url": "#", "active": true}]) }}
+
+<div class="card">
+    <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">All Schools</h2>
+        <a href="/schools/new" class="btn">Add New School</a>
+    </div>
+    
+    {% if schools %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>School Name</th>
+                <th>Address</th>
+                <th>Courses</th>
+                <th>Students</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for school in schools %}
+            <tr>
+                <td>
+                    <strong>{{ school.name }}</strong>
+                    <br><small>ID: {{ school.id }}</small>
+                </td>
+                <td>{{ school.address }}</td>
+                <td>
+                    {% set course_count = school.courses | length if school.courses else 0 %}
+                    {{ course_count }} course{{ 's' if course_count != 1 else '' }}
+                    {% if school.courses %}
+                        <br><small>{{ school.courses | selectattr('status', 'equalto', 'ACTIVE') | list | length }} active</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% set total_students = [] %}
+                    {% if school.courses %}
+                        {% for course in school.courses %}
+                            {% if course.students %}
+                                {% for student in course.students %}
+                                    {% if student not in total_students %}
+                                        {% set _ = total_students.append(student) %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                    {{ total_students | length }} student{{ 's' if total_students | length != 1 else '' }}
+                </td>
+                <td>
+                    <a href="/schools/{{ school.id }}" class="btn" style="font-size: 0.8em; padding: 4px 8px;">View</a>
+                    <a href="/schools/{{ school.id }}/edit" class="btn" style="font-size: 0.8em; padding: 4px 8px; background: #6c757d;">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 40px;">
+        <h3>No Schools Found</h3>
+        <p>Get started by adding your first school to the system.</p>
+        <a href="/schools/new" class="btn">Add First School</a>
+    </div>
+    {% endif %}
+</div>
+
+{% if debug_mode %}
+<div class="debug-info">
+    <strong>Template Debug:</strong>
+    <pre>Schools count: {{ schools | length if schools else 0 }}
+Template: school/list.html
+Context keys: {{ context.keys() | list if context else [] }}</pre>
+</div>
+{% endif %}
+{% endblock %}

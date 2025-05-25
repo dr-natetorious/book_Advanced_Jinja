@@ -20,53 +20,65 @@ from smart_templates.fastapi_integration import SmartFastApiTemplates, create_sm
 # Import test directory constants
 from tests import TEST_TEMPLATES_DIR, TEST_DATA_DIR, TEST_OUTPUT_DIR
 
-# Import test models - corrected import path
-try:
-    from tests.models.business_objects import (
-        Course,
-        CourseStatus,
-        Enrollment,
-        EnrollmentStatus,
-        School,
-        Student,
-        create_complete_test_data,
-        create_sample_course,
-        create_sample_enrollment,
-        create_sample_school,
-        create_sample_student,
-    )
-    
-    models_available = True
-except ImportError:
-    # Handle case where test models aren't available yet
-    School = Course = Student = Enrollment = None
-    EnrollmentStatus = CourseStatus = None
-    create_complete_test_data = None
-    create_sample_school = create_sample_course = None
-    create_sample_student = create_sample_enrollment = None
-    models_available = False
+# Import test models - CRITICAL: These models are expected to be available for tests.
+# If this import fails, it indicates a fundamental issue with the test setup.
+from tests.models.business_objects import (
+    Course,
+    CourseStatus,
+    Enrollment,
+    EnrollmentStatus,
+    School,
+    Student,
+    create_complete_test_data,
+    create_sample_course,
+    create_sample_enrollment,
+    create_sample_school,
+    create_sample_student,
+)
 
+# No need for models_available flag; if the import above fails, pytest will halt.
 
 @pytest.fixture
 def templates_dir(tmp_path: Path) -> Path:
-    """Create a temporary directory with test templates."""
-    templates_dir = tmp_path / "templates"
-    templates_dir.mkdir(parents=True, exist_ok=True)
+    """
+    Create a temporary directory with test templates.
+    Copies templates from TEST_TEMPLATES_DIR. If TEST_TEMPLATES_DIR
+    does not exist, this fixture will fail *unless* TEST_TEMPLATES_DIR
+    is intentionally meant to be optional, which is unlikely for core validation.
+    """
+    templates_output_dir = tmp_path / "templates"
+    templates_output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Copy templates from fixtures to temp directory
-    fixtures_templates = Path(TEST_TEMPLATES_DIR)
-    if fixtures_templates.exists():
-        import shutil
-        shutil.copytree(fixtures_templates, templates_dir, dirs_exist_ok=True)
+    fixtures_templates_source = Path(TEST_TEMPLATES_DIR)
+    
+    # Ensure source templates exist and copy them
+    if not fixtures_templates_source.exists():
+        # This is a critical error if TEST_TEMPLATES_DIR is mandatory for models.
+        # Consider making this fail explicitly or ensure your CI/local setup
+        # always has these files.
+        # For robustness, we can fall back to minimal here *if* you intend
+        # that templates sometimes don't match the full business objects.
+        # However, for "main validation," these templates should exist.
+        _create_minimal_templates(templates_output_dir)
+        pytest.fail(f"TEST_TEMPLATES_DIR '{fixtures_templates_source}' not found. "
+                    "Cannot set up full test templates. Falling back to minimal, but this "
+                    "might indicate a missing dependency or asset.")
     else:
-        # Create minimal templates for testing
-        _create_minimal_templates(templates_dir)
+        import shutil
+        shutil.copytree(fixtures_templates_source, templates_output_dir, dirs_exist_ok=True)
     
-    return templates_dir
+    return templates_output_dir
 
 
 def _create_minimal_templates(templates_dir: Path) -> None:
-    """Create minimal template files for testing when fixtures aren't available."""
+    """
+    Create minimal template files for testing when fixtures aren't available
+    or as a fallback.
+    NOTE: If TEST_TEMPLATES_DIR is central to your project, this function should
+    ideally only be called *if* that directory is truly missing, and you need
+    a basic sanity check. For full model validation, the specific templates
+    in TEST_TEMPLATES_DIR are expected.
+    """
     # Base template
     (templates_dir / "base.html").write_text(
         """<!DOCTYPE html>
@@ -182,25 +194,27 @@ def _create_minimal_templates(templates_dir: Path) -> None:
 
 @pytest.fixture
 def smart_registry() -> SmartTemplateRegistry:
-    """Create a SmartTemplateRegistry with test configurations."""
+    """
+    Create a SmartTemplateRegistry with test configurations.
+    All template mappings are now unconditionally registered, as `business_objects`
+    are assumed present.
+    """
     registry = SmartTemplateRegistry()
     
-    # Register template mappings if models are available
-    if models_available:
-        # School templates
-        registry.register(School, template_name="school/dashboard.html")
-        registry.register(School, template_name="school/list.html", variation="list")
-        
-        # Student templates with status variations
-        registry.register(Student, template_name="student/profile.html")
-        registry.register(Student, template_name="student/active.html", variation=EnrollmentStatus.ACTIVE)
-        registry.register(Student, template_name="student/completed.html", variation=EnrollmentStatus.COMPLETED)
-        registry.register(Student, template_name="student/reattempt.html", variation=EnrollmentStatus.REATTEMPT)
-        
-        # Course templates
-        registry.register(Course, template_name="course/detail.html")
-        registry.register(Course, template_name="course/instructor_view.html", variation="instructor")
-        registry.register(Course, template_name="course/student_view.html", variation="student")
+    # School templates
+    registry.register(School, template_name="school/dashboard.html")
+    registry.register(School, template_name="school/list.html", variation="list")
+    
+    # Student templates with status variations
+    registry.register(Student, template_name="student/profile.html")
+    registry.register(Student, template_name="student/active.html", variation=EnrollmentStatus.ACTIVE)
+    registry.register(Student, template_name="student/completed.html", variation=EnrollmentStatus.COMPLETED)
+    registry.register(Student, template_name="student/reattempt.html", variation=EnrollmentStatus.REATTEMPT)
+    
+    # Course templates (assuming detail.html, instructor_view.html, student_view.html exist in TEST_TEMPLATES_DIR/course)
+    registry.register(Course, template_name="course/detail.html")
+    registry.register(Course, template_name="course/instructor_view.html", variation="instructor")
+    registry.register(Course, template_name="course/student_view.html", variation="student")
     
     return registry
 
@@ -252,60 +266,55 @@ def smart_pytest_templates(
         )
         return templates
     except ImportError:
-        # Return None if not implemented yet
+        # Return None if not implemented yet (or skip test if this fixture is used)
         return None
 
 
 @pytest.fixture
-def sample_test_data() -> tuple[list[Any], list[Any], list[Any], list[Any]]:
+def sample_test_data() -> tuple[list[School], list[Course], list[Student], list[Enrollment]]:
     """Create complete sample test data using factory functions."""
-    if models_available and create_complete_test_data:
-        return create_complete_test_data()
-    return [], [], [], []
+    # This now directly calls create_complete_test_data as models are assumed available.
+    return create_complete_test_data()
 
 
 @pytest.fixture
-def sample_schools(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+def sample_schools(sample_test_data: tuple[list[School], list[Course], list[Student], list[Enrollment]]) -> list[School]:
     """Extract sample schools from complete test data."""
     schools, _, _, _ = sample_test_data
     return schools
 
 
 @pytest.fixture
-def sample_courses(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+def sample_courses(sample_test_data: tuple[list[School], list[Course], list[Student], list[Enrollment]]) -> list[Course]:
     """Extract sample courses from complete test data."""
     _, courses, _, _ = sample_test_data
     return courses
 
 
 @pytest.fixture
-def sample_students(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+def sample_students(sample_test_data: tuple[list[School], list[Course], list[Student], list[Enrollment]]) -> list[Student]:
     """Extract sample students from complete test data."""
     _, _, students, _ = sample_test_data
     return students
 
 
 @pytest.fixture
-def sample_enrollments(sample_test_data: tuple[list[Any], list[Any], list[Any], list[Any]]) -> list[Any]:
+def sample_enrollments(sample_test_data: tuple[list[School], list[Course], list[Student], list[Enrollment]]) -> list[Enrollment]:
     """Extract sample enrollments from complete test data."""
     _, _, _, enrollments = sample_test_data
     return enrollments
 
 
 @pytest.fixture
-def sample_school() -> Any:
+def sample_school() -> School:
     """Create a single sample school for testing."""
-    if models_available and create_sample_school:
-        return create_sample_school("Test University", "San Francisco", "CA")
-    return None
+    return create_sample_school("Test University", "San Francisco", "CA")
 
 
 @pytest.fixture
-def sample_student() -> Any:
+def sample_student() -> Student:
     """Create a single sample student for testing."""
-    if models_available and create_sample_student:
-        return create_sample_student("John Doe", major="Computer Science")
-    return None
+    return create_sample_student("John Doe", major="Computer Science")
 
 
 @pytest.fixture
@@ -317,40 +326,39 @@ def test_fastapi_app(smart_fastapi_templates: SmartFastApiTemplates) -> FastAPI:
     smart_response = create_smart_response(smart_fastapi_templates)
     
     @app.get("/")
-    async def root(request):
+    async def root(): # 'request' parameter is not used in FastAPI >= 0.100.0 without Request dependency
         return {"message": "Hello from SmartTemplates test app"}
     
     @app.get("/health")
-    async def health(request):
+    async def health(): # 'request' parameter removed for consistency
         return {"status": "healthy", "service": "smarttemplates-test"}
     
-    # Add business routes if models are available
-    if models_available:
-        @app.get("/schools/{school_id}")
-        @smart_response("school/dashboard.html")
-        async def get_school(request, school_id: int):
-            # Create a test school with realistic data
-            school = create_sample_school(f"Test School {school_id}", "Test City", "CA")
-            school.id = school_id
-            return school
-        
-        @app.get("/schools")
-        @smart_response("school/list.html")
-        async def list_schools(request):
-            schools = [
-                create_sample_school("Tech University", "San Francisco", "CA"),
-                create_sample_school("State College", "Austin", "TX"),
-            ]
-            for i, school in enumerate(schools, 1):
-                school.id = i
-            return {"schools": schools}
-        
-        @app.get("/students/{student_id}")
-        @smart_response("student/profile.html")
-        async def get_student(request, student_id: int):
-            student = create_sample_student(f"Test Student {student_id}", major="Computer Science")
-            student.id = student_id
-            return student
+    # Add business routes directly, as models are assumed available
+    @app.get("/schools/{school_id}")
+    @smart_response("school/dashboard.html")
+    async def get_school(school_id: int):
+        # Create a test school with realistic data
+        school = create_sample_school(f"Test School {school_id}", "Test City", "CA")
+        school.id = school_id
+        return school
+    
+    @app.get("/schools")
+    @smart_response("school/list.html")
+    async def list_schools():
+        schools = [
+            create_sample_school("Tech University", "San Francisco", "CA"),
+            create_sample_school("State College", "Austin", "TX"),
+        ]
+        for i, school in enumerate(schools, 1):
+            school.id = i
+        return {"schools": schools}
+    
+    @app.get("/students/{student_id}")
+    @smart_response("student/profile.html")
+    async def get_student(student_id: int):
+        student = create_sample_student(f"Test Student {student_id}", major="Computer Science")
+        student.id = student_id
+        return student
     
     return app
 
@@ -378,7 +386,7 @@ def render_error_context() -> dict[str, Any]:
     """Create a context that will cause rendering errors for testing."""
     return {
         "undefined_variable": "{{ missing_var }}",
-        "invalid_syntax": "{% invalid syntax %}"
+        "invalid_syntax": "{% invalid syntax %}" # Jinja will likely catch this as a template syntax error
     }
 
 
@@ -397,6 +405,9 @@ def assert_no_template_errors(error: Any) -> None:
 def assert_template_error(error: Any, expected_error_type: str) -> None:
     """Assert that a template error occurred with expected type."""
     assert error is not None, "Expected template error but none occurred"
+    # Adjusted access based on the likely structure of SmartTemplates' error object
+    assert hasattr(error, 'error') and hasattr(error.error, 'error_type'), \
+        "Error object does not have expected structure for error type checking."
     assert error.error.error_type == expected_error_type, \
         f"Expected error type '{expected_error_type}', got '{error.error.error_type}'"
 
@@ -422,6 +433,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "templates: mark test as template related"
     )
+    config.addinivalue_line(
+        "markers", "models: mark test as dependent on business models" # Added this marker
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -438,5 +452,6 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.fastapi)
         if "template" in item.name.lower():
             item.add_marker(pytest.mark.templates)
-        if "business" in item.name.lower() or "scenario" in item.name.lower():
+        if "business" in item.name.lower() or "scenario" in item.name.lower() or "model" in item.name.lower():
             item.add_marker(pytest.mark.business)
+            item.add_marker(pytest.mark.models) # Automatically mark tests using models as such

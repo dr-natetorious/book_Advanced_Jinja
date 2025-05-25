@@ -1,0 +1,62 @@
+# tests/fixtures/templates/error.html
+{% extends "base.html" %}
+
+{% block title %}Template Error - SmartTemplates{% endblock %}
+{% block page_title %}Template Rendering Error{% endblock %}
+
+{% block content %}
+<div class="card" style="border-color: #dc3545; background: #f8d7da;">
+    <h2 style="color: #721c24; margin-top: 0;">Template Error Occurred</h2>
+    
+    {% if error %}
+        <div style="margin: 15px 0;">
+            <p><strong>Error Type:</strong> {{ error.error.error_type }}</p>
+            <p><strong>Message:</strong> {{ error.error.message }}</p>
+            
+            {% if error.error.template_name %}
+            <p><strong>Template:</strong> {{ error.error.template_name }}</p>
+            {% endif %}
+            
+            {% if error.error.macro_name %}
+            <p><strong>Macro:</strong> {{ error.error.macro_name }}</p>
+            {% endif %}
+            
+            {% if error.error.line_number %}
+            <p><strong>Line Number:</strong> {{ error.error.line_number }}</p>
+            {% endif %}
+            
+            <p><strong>Timestamp:</strong> {{ error.error.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+        </div>
+        
+        {% if debug_mode and error.error.context_data %}
+        <div class="debug-info">
+            <strong>Context Data Types:</strong>
+            <pre>{{ error.error.context_data | pprint }}</pre>
+        </div>
+        {% endif %}
+        
+        {% if debug_mode and error.error.stack_trace %}
+        <div class="debug-info">
+            <strong>Stack Trace:</strong>
+            <pre>{{ error.error.stack_trace | join('\n') }}</pre>
+        </div>
+        {% endif %}
+    {% else %}
+        <p>An unknown error occurred while rendering the template.</p>
+    {% endif %}
+    
+    {% if original_context and debug_mode %}
+    <div class="debug-info">
+        <strong>Original Context:</strong>
+        <pre>{{ original_context | pprint }}</pre>
+    </div>
+    {% endif %}
+</div>
+
+<div style="margin-top: 20px;">
+    <a href="javascript:history.back()" class="btn">Go Back</a>
+    {% if request %}
+    <a href="{{ request.url.path }}" class="btn" style="background: #6c757d;">Retry</a>
+    {% endif %}
+</div>
+{% endblock %}

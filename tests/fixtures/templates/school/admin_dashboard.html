@@ -1,0 +1,6 @@
+# tests/fixtures/templates/school/admin_dashboard.html
+{% extends "base.html" %}
+{% from "macros/navigation.html" import breadcrumb_nav %}
+
+{% block title %}{{ object.name }} - Admin Dashboard{% endblock %}
+{% block page_title %}{{ object.name }} - Administrative Dashboard{% endblock %}
