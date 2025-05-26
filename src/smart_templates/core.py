@@ -53,11 +53,11 @@ class RegistrationConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     
     name: str = Field(..., description="Name/path of the registration target")
-    type: RegistrationType = Field(..., description="Type of Jinja2 registration")
+    registration_type: RegistrationType = Field(..., description="Type of Jinja2 registration")
     target: str = Field(..., description="Target identifier (template path, function name, etc.)")
     
     # Optional refinements for template resolution
-    model: type | None = Field(None, description="Model type for specific mapping")
+    model_class: type | None = Field(None, description="Model type for specific mapping")
     variation: EnumStr | None = Field(None, description="Variation for specific mapping")
 
 
@@ -104,7 +104,7 @@ class SmartTemplateRegistry:
             obj_type: The object type to register
             config: Registration configuration specifying type and target
         """
-        key = self._make_key(obj_type, config.model, config.variation)
+        key = self._make_key(obj_type, config.model_class, config.variation)
         self._registrations[key] = config
         
         # Clear cache when registrations change
@@ -129,27 +129,27 @@ class SmartTemplateRegistry:
             # Register macro with explicit template
             config = RegistrationConfig(
                 name=macro_name,
-                type=RegistrationType.MACRO,
+                registration_type=RegistrationType.MACRO,
                 target=template_name,
-                model=model,
+                model_class=model,
                 variation=variation
             )
         elif macro_name:
             # Register macro with convention-based template
             config = RegistrationConfig(
                 name=macro_name,
-                type=RegistrationType.MACRO,
+                registration_type=RegistrationType.MACRO,
                 target=self._convention_based_name(obj_type, model, variation),
-                model=model,
+                model_class=model,
                 variation=variation
             )
         else:
             # Register template
             config = RegistrationConfig(
                 name=template_name,
-                type=RegistrationType.TEMPLATE,
+                registration_type=RegistrationType.TEMPLATE,
                 target=template_name,
-                model=model,
+                model_class=model,
                 variation=variation
             )
         
@@ -187,15 +187,33 @@ class SmartTemplateRegistry:
 
     def find_template(
         self, obj: Any, model: type | None = None, variation: EnumStr | None = None
-    ) -> dict[str, str] | None:
+        ) -> dict[str, str] | None:
         """Find template/macro mapping for an object."""
         obj_type = type(obj)
         
         # Convert to strings for caching
         model_name = model.__name__ if model else None
-        variation_str = str(variation) if variation else None
+        variation_str = variation.value if isinstance(variation, Enum) else str(variation) if variation else None
         
-        return self._find_template_cached(obj_type.__name__, model_name, variation_str, obj)
+        # Try cached lookup first (registrations only)
+        result = self._find_template_cached(obj_type.__name__, model_name, variation_str)
+        if result:
+            return result
+        
+        # Try pattern functions (need actual obj)
+        for pattern_func in self._patterns:
+            try:
+                result = pattern_func(obj, model, variation)
+                if result:
+                    return result
+            except Exception as e:
+                self._logger.warning("Pattern function failed: %s", e)
+        
+        # Convention-based fallback
+        return {
+            "type": "template",
+            "path": self._convention_based_name_from_strings(obj_type.__name__, model_name, variation_str),
+        }
 
     @lru_cache(maxsize=256)
     def _find_template_cached(
@@ -203,8 +221,7 @@ class SmartTemplateRegistry:
         obj_type_name: str, 
         model_name: str | None, 
         variation_str: str | None,
-        obj: Any
-    ) -> dict[str, str] | None:
+        ) -> dict[str, str] | None:
         """Cached template lookup implementation."""
         # Try exact matches with fallback hierarchy
         for key_parts in [
@@ -217,33 +234,20 @@ class SmartTemplateRegistry:
             if key in self._registrations:
                 config = self._registrations[key]
                 
-                if config.type == RegistrationType.MACRO:
+                if config.registration_type == RegistrationType.MACRO:
                     return {
                         "type": "macro",
                         "template": config.target,
                         "macro": config.name,
                     }
-                elif config.type == RegistrationType.TEMPLATE:
+                elif config.registration_type == RegistrationType.TEMPLATE:
                     return {
                         "type": "template",
                         "path": config.target,
                     }
-                # Handle other types (filter, test, function) in future versions
-
-        # Try pattern functions
-        for pattern_func in self._patterns:
-            try:
-                result = pattern_func(obj, None, variation_str)  # Simplified for patterns
-                if result:
-                    return result
-            except Exception as e:
-                self._logger.warning("Pattern function failed: %s", e)
-
-        # Convention-based fallback
-        return {
-            "type": "template",
-            "path": self._convention_based_name_from_strings(obj_type_name, model_name, variation_str),
-        }
+        
+        # No registration found
+        return None
 
     def debug_lookup(
         self, obj: Any, model: type | None = None, variation: EnumStr | None = None

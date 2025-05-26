@@ -14,7 +14,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from smart_templates.core import SmartTemplateRegistry, SmartTemplates
+from smart_templates import SmartTemplateRegistry, SmartTemplates
 from smart_templates.fastapi_integration import (
     SmartFastApiTemplates,
     create_smart_response,
@@ -208,36 +208,35 @@ def smart_registry() -> SmartTemplateRegistry:
     registry = SmartTemplateRegistry()
 
     # School templates
-    registry.register(School, template_name="school/dashboard.html")
-    registry.register(School, template_name="school/list.html", variation="list")
+    registry.register_simple(School, template_name="school/dashboard.html")
+    registry.register_simple(School, template_name="school/list.html", variation="list")
 
     # Student templates with status variations
-    registry.register(Student, template_name="student/profile.html")
-    registry.register(
+    registry.register_simple(Student, template_name="student/profile.html")
+    registry.register_simple(
         Student, template_name="student/active.html", variation=EnrollmentStatus.ACTIVE
     )
-    registry.register(
+    registry.register_simple(
         Student,
         template_name="student/completed.html",
         variation=EnrollmentStatus.COMPLETED,
     )
-    registry.register(
+    registry.register_simple(
         Student,
         template_name="student/reattempt.html",
         variation=EnrollmentStatus.REATTEMPT,
     )
 
-    # Course templates (assuming detail.html, instructor_view.html, student_view.html exist in TEST_TEMPLATES_DIR/course)
-    registry.register(Course, template_name="course/detail.html")
-    registry.register(
+    # Course templates
+    registry.register_simple(Course, template_name="course/detail.html")
+    registry.register_simple(
         Course, template_name="course/instructor_view.html", variation="instructor"
     )
-    registry.register(
+    registry.register_simple(
         Course, template_name="course/student_view.html", variation="student"
     )
 
     return registry
-
 
 @pytest.fixture
 def smart_templates(

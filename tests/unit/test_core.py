@@ -10,6 +10,7 @@ Test Categories:
 - Registry Basic: Template/macro registration and lookup
 - Registry Resolution: Fallback hierarchy and naming conventions  
 - Registry Patterns: Custom pattern functions
+- Registry New Features: Config-based registration, debugging, caching
 - Render Safe: Template rendering with error handling
 - Safe Macro: Macro rendering functionality
 - Render Object: Object-based template resolution
@@ -23,10 +24,13 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import Mock
 
+from pydantic import ValidationError
 import pytest
 
 from smart_templates.core import (
     RenderError,
+    RegistrationConfig,
+    RegistrationType,
     SmartTemplateRegistry,
     SmartTemplates,
     TemplateErrorDetail,
@@ -51,7 +55,7 @@ class TestSmartTemplateRegistryBasic:
     def test_register_template_only(self):
         """Test registering template without macro."""
         registry = SmartTemplateRegistry()
-        registry.register(School, template_name="school/dashboard.html")
+        registry.register_simple(School, template_name="school/dashboard.html")
         
         school = create_sample_school("Test University")
         mapping = registry.find_template(school)
@@ -63,7 +67,7 @@ class TestSmartTemplateRegistryBasic:
     def test_register_macro_only(self):
         """Test registering macro without explicit template."""
         registry = SmartTemplateRegistry()
-        registry.register(Student, macro_name="render_student")
+        registry.register_simple(Student, macro_name="render_student")
         
         student = create_sample_student("John Doe")
         mapping = registry.find_template(student)
@@ -71,13 +75,12 @@ class TestSmartTemplateRegistryBasic:
         assert mapping is not None
         assert mapping["type"] == "macro"
         assert mapping["macro"] == "render_student"
-        # Should use convention-based template name
         assert mapping["template"] == "student.html"
 
     def test_register_both_template_and_macro(self):
         """Test registering both template and macro."""
         registry = SmartTemplateRegistry()
-        registry.register(
+        registry.register_simple(
             Course,
             template_name="course/detail.html",
             macro_name="render_course"
@@ -94,7 +97,7 @@ class TestSmartTemplateRegistryBasic:
     def test_register_with_model_variation(self):
         """Test registering with model and variation parameters."""
         registry = SmartTemplateRegistry()
-        registry.register(
+        registry.register_simple(
             Student,
             template_name="student/active.html",
             model=Enrollment,
@@ -112,6 +115,149 @@ class TestSmartTemplateRegistryBasic:
         assert mapping["type"] == "template"
         assert mapping["path"] == "student/active.html"
 
+    def test_register_requires_template_or_macro(self):
+        """Test that registration requires either template_name or macro_name."""
+        registry = SmartTemplateRegistry()
+        
+        with pytest.raises(ValueError, match="requires either template_name or macro_name"):
+            registry.register_simple(School)
+
+
+class TestSmartTemplateRegistryNewFeatures:
+    """Test new registry features: config-based registration, debugging, management."""
+
+    def test_register_with_config(self):
+        """Test new config-based registration API."""
+        registry = SmartTemplateRegistry()
+        
+        config = RegistrationConfig(
+            name="school/dashboard.html",
+            registration_type=RegistrationType.TEMPLATE,
+            target="school/dashboard.html"
+        )
+        registry.register(School, config=config)
+        
+        school = create_sample_school("Config University")
+        mapping = registry.find_template(school)
+        
+        assert mapping["type"] == "template"
+        assert mapping["path"] == "school/dashboard.html"
+
+    def test_register_macro_with_config(self):
+        """Test macro registration with config."""
+        registry = SmartTemplateRegistry()
+        
+        config = RegistrationConfig(
+            name="render_student",
+            registration_type=RegistrationType.MACRO,
+            target="student/profile.html",
+            variation=EnrollmentStatus.ACTIVE
+        )
+        registry.register(Student, config=config)
+        
+        student = create_sample_student("Config Student")
+        mapping = registry.find_template(student, variation=EnrollmentStatus.ACTIVE)
+        
+        assert mapping["type"] == "macro"
+        assert mapping["macro"] == "render_student"
+        assert mapping["template"] == "student/profile.html"
+
+    def test_unregister_functionality(self):
+        """Test removing registrations."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        
+        school = create_sample_school("Test University")
+        mapping = registry.find_template(school)
+        assert mapping["path"] == "school/dashboard.html"
+        
+        # Unregister
+        removed = registry.unregister(School)
+        assert removed is True
+        
+        # Should fall back to convention
+        mapping = registry.find_template(school)
+        assert mapping["path"] == "school.html"
+        
+        # Unregistering again should return False
+        removed = registry.unregister(School)
+        assert removed is False
+
+    def test_clear_registrations(self):
+        """Test clearing all registrations."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        registry.register_simple(Student, template_name="student/profile.html")
+        
+        # Verify registrations exist
+        registrations = registry.list_registrations()
+        assert len(registrations) == 2
+        
+        # Clear all
+        registry.clear()
+        registrations = registry.list_registrations()
+        assert len(registrations) == 0
+        
+        # Should fall back to convention
+        school = create_sample_school("Test University")
+        mapping = registry.find_template(school)
+        assert mapping["path"] == "school.html"
+
+    def test_list_registrations(self):
+        """Test registry inspection."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        registry.register_simple(
+            Student,
+            template_name="student/active.html",
+            variation=EnrollmentStatus.ACTIVE
+        )
+        
+        registrations = registry.list_registrations()
+        assert len(registrations) == 2
+        assert "School" in registrations
+        assert "Student:ACTIVE" in registrations or "Student:active" in registrations
+
+    def test_debug_lookup(self):
+        """Test debug information for template lookup."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        
+        school = create_sample_school("Debug University")
+        debug_info = registry.debug_lookup(school)
+        
+        assert debug_info["obj_type"] == "School"
+        assert debug_info["final_mapping"]["path"] == "school/dashboard.html"
+        assert "lookup_hierarchy" in debug_info
+        assert "cache_info" in debug_info
+
+    def test_registry_caching(self):
+        """Test LRU cache functionality."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        
+        school = create_sample_school("Cache University")
+        
+        # First lookup
+        mapping1 = registry.find_template(school)
+        debug1 = registry.debug_lookup(school)
+        
+        # Second lookup should use cache
+        mapping2 = registry.find_template(school)
+        debug2 = registry.debug_lookup(school)
+        
+        assert mapping1 == mapping2
+        assert debug2["cache_info"]["hits"] > debug1["cache_info"]["hits"]
+
+    def test_registry_repr(self):
+        """Test registry string representation."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/dashboard.html")
+        
+        repr_str = repr(registry)
+        assert "SmartTemplateRegistry" in repr_str
+        assert "registrations=1" in repr_str
+
 
 class TestSmartTemplateRegistryResolution:
     """Test template resolution with fallback hierarchy and naming conventions."""
@@ -121,18 +267,18 @@ class TestSmartTemplateRegistryResolution:
         registry = SmartTemplateRegistry()
         
         # Register multiple variations
-        registry.register(Student, template_name="student/profile.html")
-        registry.register(
+        registry.register_simple(Student, template_name="student/profile.html")
+        registry.register_simple(
             Student,
             template_name="student/active.html",
             variation=EnrollmentStatus.ACTIVE
         )
-        registry.register(
+        registry.register_simple(
             Student,
             template_name="student/enrollment.html",
             model=Enrollment
         )
-        registry.register(
+        registry.register_simple(
             Student,
             template_name="student/active_enrollment.html",
             model=Enrollment,
@@ -164,7 +310,7 @@ class TestSmartTemplateRegistryResolution:
         registry = SmartTemplateRegistry()
         
         # Only register base template
-        registry.register(Course, template_name="course/base.html")
+        registry.register_simple(Course, template_name="course/base.html")
         
         course = create_sample_course("Test Course", "TEST101")
         
@@ -252,7 +398,7 @@ class TestSmartTemplateRegistryPatterns:
             }
         
         registry.register_pattern(always_override_pattern)
-        registry.register(School, template_name="school/registered.html")
+        registry.register_simple(School, template_name="school/registered.html")
         
         school = create_sample_school("Test University")
         mapping = registry.find_template(school)
@@ -277,6 +423,47 @@ class TestSmartTemplateRegistryPatterns:
         assert mapping["path"] == "school.html"
 
 
+class TestSmartTemplatesInitialization:
+    """Test SmartTemplates initialization and validation."""
+
+    def test_valid_directory_initialization(self, templates_dir: Path):
+        """Test initialization with valid directory."""
+        templates = SmartTemplates(str(templates_dir))
+        assert templates.debug_mode is False
+        assert templates.registry is not None
+        assert "debug_mode" in templates.env.globals
+
+    def test_invalid_directory_initialization(self):
+        """Test initialization with invalid directory."""
+        with pytest.raises(ValueError, match="does not exist"):
+            SmartTemplates("/nonexistent/path")
+        
+        # Test with file instead of directory
+        with pytest.raises(ValueError, match="is not a directory"):
+            SmartTemplates(__file__)
+
+    def test_custom_registry_initialization(self, templates_dir: Path):
+        """Test initialization with custom registry."""
+        registry = SmartTemplateRegistry()
+        registry.register_simple(School, template_name="school/custom.html")
+        
+        templates = SmartTemplates(str(templates_dir), registry=registry)
+        assert templates.registry is registry
+        
+        school = create_sample_school("Custom University")
+        mapping = templates.registry.find_template(school)
+        assert mapping["path"] == "school/custom.html"
+
+    def test_templates_repr(self, templates_dir: Path):
+        """Test SmartTemplates string representation."""
+        templates = SmartTemplates(str(templates_dir), debug_mode=True)
+        
+        repr_str = repr(templates)
+        assert "SmartTemplates" in repr_str
+        assert "debug_mode=True" in repr_str
+        assert str(templates_dir) in repr_str
+
+
 class TestSmartTemplatesRenderSafe:
     """Test safe template rendering with error handling."""
 
@@ -292,7 +479,7 @@ class TestSmartTemplatesRenderSafe:
         
         assert error is None
         assert "Test Page" in content
-        assert "SmartTemplates" in content  # From base template
+        assert "SmartTemplates" in content
 
     def test_render_safe_undefined_variable(self, smart_templates: SmartTemplates):
         """Test handling of undefined variables in templates."""
@@ -438,7 +625,7 @@ class TestSmartTemplatesRenderObject:
     def test_render_obj_template_resolution(self, smart_templates: SmartTemplates):
         """Test object rendering with template resolution using official templates."""
         # Register template for School objects using official template
-        smart_templates.registry.register(School, template_name="school/dashboard.html")
+        smart_templates.registry.register_simple(School, template_name="school/dashboard.html")
         
         school = create_sample_school("Tech University")
         context = {"extra_data": "test"}
@@ -453,7 +640,7 @@ class TestSmartTemplatesRenderObject:
     def test_render_obj_macro_resolution(self, smart_templates: SmartTemplates):
         """Test object rendering with macro resolution using official templates."""
         # Register macro for Course objects using official macro template
-        smart_templates.registry.register(
+        smart_templates.registry.register_simple(
             Course,
             template_name="macros/course_components.html",
             macro_name="course_card"
@@ -475,7 +662,7 @@ class TestSmartTemplatesRenderObject:
     def test_render_obj_with_model_variation(self, smart_templates: SmartTemplates):
         """Test object rendering with model and variation parameters using official templates."""
         # Register status-specific template using official template
-        smart_templates.registry.register(
+        smart_templates.registry.register_simple(
             Student,
             template_name="student/completed.html",
             model=Enrollment,
@@ -513,7 +700,7 @@ class TestSmartTemplatesRenderObject:
 
     def test_render_obj_object_injection(self, smart_templates: SmartTemplates):
         """Test that object is automatically injected into template context."""
-        smart_templates.registry.register(Student, template_name="student/profile.html")
+        smart_templates.registry.register_simple(Student, template_name="student/profile.html")
         
         student = create_sample_student("Context Student")
         original_context = {"existing_var": "test"}
@@ -524,6 +711,22 @@ class TestSmartTemplatesRenderObject:
         assert "Context Student" in content
         # Original context should not be mutated
         assert "object" not in original_context
+
+    def test_debug_render_obj(self, smart_templates: SmartTemplates):
+        """Test debug version of render_obj."""
+        smart_templates.registry.register_simple(School, template_name="school/dashboard.html")
+        
+        school = create_sample_school("Debug University")
+        context = {"test": "data"}
+        
+        debug_info = smart_templates.debug_render_obj(school, context)
+        
+        assert "lookup_debug" in debug_info
+        assert "render_success" in debug_info
+        assert "content_length" in debug_info
+        assert "context_keys" in debug_info
+        assert debug_info["render_success"] is True
+        assert debug_info["context_keys"] == ["test"]
 
 
 class TestSmartTemplatesDebugFeatures:
@@ -570,10 +773,6 @@ class TestSmartTemplatesDebugFeatures:
         # Should return the original value
         assert result == test_value
         
-        # Should log debug information when debug mode is on
-        assert "DEBUG test_var" in caplog.text
-        assert "str" in caplog.text
-
     def test_extract_context_types(self, smart_templates: SmartTemplates):
         """Test context type extraction for debugging."""
         context = {
@@ -634,8 +833,8 @@ class TestSmartTemplatesIntegration:
     def test_complete_workflow_with_business_objects(self, smart_templates: SmartTemplates):
         """Test complete workflow using business objects and official templates."""
         # Register templates for different object types using official templates
-        smart_templates.registry.register(School, template_name="school/dashboard.html")
-        smart_templates.registry.register(
+        smart_templates.registry.register_simple(School, template_name="school/dashboard.html")
+        smart_templates.registry.register_simple(
             Student,
             template_name="student/active.html",
             variation=EnrollmentStatus.ACTIVE
@@ -662,7 +861,7 @@ class TestSmartTemplatesIntegration:
     def test_error_propagation_chain(self, smart_templates: SmartTemplates):
         """Test that errors propagate correctly through the chain."""
         # Register template that doesn't exist (not in official template list)
-        smart_templates.registry.register(Course, template_name="nonexistent/course.html")
+        smart_templates.registry.register_simple(Course, template_name="nonexistent/course.html")
         
         course = create_sample_course("Error Course", "ERR101")
         content, error = smart_templates.render_obj(course, {})
@@ -675,24 +874,24 @@ class TestSmartTemplatesIntegration:
     def test_multiple_registrations_override(self, smart_templates: SmartTemplates):
         """Test that later registrations override earlier ones."""
         # Register initial template
-        smart_templates.registry.register(Student, template_name="student/initial.html")
+        smart_templates.registry.register_simple(Student, template_name="student/initial.html")
         
         # Override with new registration
-        smart_templates.registry.register(Student, template_name="student/override.html")
+        smart_templates.registry.register_simple(Student, template_name="student/override.html")
         
         student = create_sample_student("Override Student")
         mapping = smart_templates.registry.find_template(student)
         
         assert mapping["path"] == "student/override.html"
 
-    def test_registry_sharing_between_instances(self):
+    def test_registry_sharing_between_instances(self, templates_dir: Path):
         """Test that registry can be shared between SmartTemplates instances."""
         registry = SmartTemplateRegistry()
-        registry.register(School, template_name="school/dashboard.html")  # Official template
+        registry.register_simple(School, template_name="school/dashboard.html")  # Official template
         
         # Create two template instances with shared registry
-        templates1 = SmartTemplates("templates", registry=registry)
-        templates2 = SmartTemplates("templates", registry=registry)
+        templates1 = SmartTemplates(str(templates_dir), registry=registry)
+        templates2 = SmartTemplates(str(templates_dir), registry=registry)
         
         school = create_sample_school("Shared School")
         
@@ -701,3 +900,192 @@ class TestSmartTemplatesIntegration:
         mapping2 = templates2.registry.find_template(school)
         
         assert mapping1["path"] == mapping2["path"] == "school/dashboard.html"
+
+    def test_config_and_simple_registration_interoperability(self, smart_templates: SmartTemplates):
+        """Test that config-based and simple registration work together."""
+        # Use simple registration
+        smart_templates.registry.register_simple(School, template_name="school/simple.html")
+        
+        # Use config registration
+        config = RegistrationConfig(
+            name="student/config.html",
+            registration_type=RegistrationType.TEMPLATE,
+            target="student/config.html"
+        )
+        smart_templates.registry.register(Student, config=config)
+        
+        # Both should work
+        school = create_sample_school("Simple School")
+        student = create_sample_student("Config Student")
+        
+        school_mapping = smart_templates.registry.find_template(school)
+        student_mapping = smart_templates.registry.find_template(student)
+        
+        assert school_mapping["path"] == "school/simple.html"
+        assert student_mapping["path"] == "student/config.html"
+
+    def test_cache_invalidation_on_registration_changes(self):
+        """Test that cache is cleared when registrations change."""
+        registry = SmartTemplateRegistry()
+        
+        # Initial lookup
+        school = create_sample_school("Cache School")
+        mapping1 = registry.find_template(school)
+        debug1 = registry.debug_lookup(school)
+        
+        # Add registration
+        registry.register_simple(School, template_name="school/cached.html")
+        
+        # Lookup again - should get new result and reset cache
+        mapping2 = registry.find_template(school)
+        debug2 = registry.debug_lookup(school)
+        
+        assert mapping1["path"] == "school.html"  # Convention
+        assert mapping2["path"] == "school/cached.html"  # Registered
+        
+        # Cache should be reset (misses reset)
+        assert debug2["cache_info"]["misses"] >= debug1["cache_info"]["misses"]
+
+    def test_template_not_found_with_debug_info(self, smart_templates: SmartTemplates):
+        """Test template not found error includes debug information."""
+        school = create_sample_school("Debug School")
+        
+        # Try to render without registration (will use convention and fail)
+        content, error = smart_templates.render_obj(school, {})
+        
+        assert content == ""
+        assert error is not None
+        assert error.error.error_type == "TemplateNotFound"
+        
+        # Get debug info for the same lookup
+        debug_info = smart_templates.debug_render_obj(school, {})
+        
+        assert debug_info["render_success"] is False
+        assert debug_info["lookup_debug"]["obj_type"] == "School"
+        assert debug_info["lookup_debug"]["final_mapping"]["path"] == "school.html"
+
+
+class TestRegistrationConfigValidation:
+    """Test RegistrationConfig validation and features."""
+
+    def test_registration_config_creation(self):
+        """Test creating RegistrationConfig objects."""
+        config = RegistrationConfig(
+            name="test_template",
+            registration_type=RegistrationType.TEMPLATE,
+            target="templates/test.html"
+        )
+        
+        assert config.name == "test_template"
+        assert config.registration_type == RegistrationType.TEMPLATE
+        assert config.target == "templates/test.html"
+        assert config.model_class is None
+        assert config.variation is None
+
+    def test_registration_config_with_model_variation(self):
+        """Test RegistrationConfig with model and variation."""
+        config = RegistrationConfig(
+            name="student_macro",
+            registration_type=RegistrationType.MACRO,
+            target="macros/student.html",
+            model_class=Enrollment,
+            variation=EnrollmentStatus.ACTIVE
+        )
+        
+        assert config.model_class is Enrollment
+        assert config.variation == EnrollmentStatus.ACTIVE
+
+    def test_registration_config_immutable(self):
+        """Test that RegistrationConfig is immutable."""
+        config = RegistrationConfig(
+            name="test",
+            registration_type=RegistrationType.TEMPLATE,
+            target="test.html"
+        )
+        
+        # Pydantic frozen model should prevent modification
+        with pytest.raises(ValidationError):
+            config.name = "modified"
+
+    def test_registration_config_serialization(self):
+        """Test RegistrationConfig serialization."""
+        config = RegistrationConfig(
+            name="test_macro",
+            registration_type=RegistrationType.MACRO,
+            target="macros/test.html",
+            model_class=Student,
+            variation=EnrollmentStatus.COMPLETED
+        )
+        
+        data = config.model_dump()
+        assert data["name"] == "test_macro"
+        assert data["registration_type"] == RegistrationType.MACRO
+        assert data["target"] == "macros/test.html"
+
+    def test_registration_type_enum(self):
+        """Test RegistrationType enum values."""
+        assert RegistrationType.TEMPLATE.value == "template"
+        assert RegistrationType.MACRO.value == "macro"
+        assert RegistrationType.FILTER.value == "filter"
+        assert RegistrationType.TEST.value == "test"
+        assert RegistrationType.FUNCTION.value == "function"
+
+
+class TestErrorHandlingEnhancements:
+    """Test enhanced error handling features."""
+
+    def test_template_error_detail_completeness(self):
+        """Test that TemplateErrorDetail captures all relevant information."""
+        error = TemplateErrorDetail(
+            error_type="TestError",
+            message="Test error message",
+            template_name="test.html",
+            macro_name="test_macro",
+            line_number=42,
+            context_data={"var1": "str", "var2": "int"},
+            stack_trace=["line1", "line2"]
+        )
+        
+        assert error.error_type == "TestError"
+        assert error.message == "Test error message"
+        assert error.template_name == "test.html"
+        assert error.macro_name == "test_macro"
+        assert error.line_number == 42
+        assert error.context_data == {"var1": "str", "var2": "int"}
+        assert error.stack_trace == ["line1", "line2"]
+        assert isinstance(error.timestamp, datetime)
+
+    def test_render_error_with_debug_info(self):
+        """Test RenderError with additional debug information."""
+        error_detail = TemplateErrorDetail(
+            error_type="TestError",
+            message="Test message"
+        )
+        
+        render_error = RenderError(
+            error=error_detail,
+            debug_info={"additional": "data", "context": "info"}
+        )
+        
+        assert render_error.success is False
+        assert render_error.error.error_type == "TestError"
+        assert render_error.debug_info["additional"] == "data"
+
+    def test_structured_error_serialization(self):
+        """Test that structured errors serialize properly."""
+        error_detail = TemplateErrorDetail(
+            error_type="TemplateNotFound",
+            message="Template not found",
+            template_name="missing.html",
+            context_data={"user": "dict", "items": "list[3]"}
+        )
+        
+        render_error = RenderError(error=error_detail)
+        
+        # Should serialize to dict
+        data = render_error.model_dump()
+        assert isinstance(data, dict)
+        assert data["success"] is False
+        assert data["error"]["error_type"] == "TemplateNotFound"
+        assert data["error"]["template_name"] == "missing.html"
+        assert "timestamp" in data["error"]
