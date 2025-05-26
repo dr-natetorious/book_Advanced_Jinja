@@ -24,7 +24,7 @@ from smart_templates.fastapi_integration import (
 from tests import TEST_TEMPLATES_DIR
 
 # Import test models
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Course,
     Enrollment,
     EnrollmentStatus,
@@ -414,7 +414,7 @@ def test_fastapi_app(smart_fastapi_templates: SmartFastApiTemplates) -> FastAPI:
     @app.get("/courses/{course_id}")
     @smart_response("course/detail.html")
     async def get_course(course_id: int):
-        from tests.models.business_objects import create_sample_course
+        from university.models.business_objects import create_sample_course
         course = create_sample_course(f"Test Course {course_id}", f"CS{course_id:03d}")
         course.id = course_id
         return course
@@ -446,7 +446,7 @@ def test_client(test_fastapi_app: FastAPI) -> TestClient:
 @pytest.fixture
 def api_test_app() -> FastAPI:
     """Create the full API test application for integration testing."""
-    from tests.api.app import app
+    from university.api.app import app
     return app
 
 

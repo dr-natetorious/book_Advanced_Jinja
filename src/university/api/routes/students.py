@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 from smart_templates.fastapi_integration import SmartFastApiTemplates, create_smart_response
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Student,
     EnrollmentStatus,
     create_sample_student,

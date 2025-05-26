@@ -35,7 +35,7 @@ from smart_templates.core import (
     SmartTemplates,
     TemplateErrorDetail,
 )
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Course,
     CourseStatus,
     Enrollment,

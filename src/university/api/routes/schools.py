@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 from smart_templates.fastapi_integration import SmartFastApiTemplates, create_smart_response
-from tests.models.business_objects import School, create_sample_school
+from university.models.business_objects import School, create_sample_school
 
 router = APIRouter(prefix="/schools", tags=["schools"])
 
@@ -56,7 +56,7 @@ def setup_school_routes(templates: SmartFastApiTemplates) -> APIRouter:
         school.id = school_id
         
         # Add sample courses for admin view
-        from tests.models.business_objects import create_sample_course
+        from university.models.business_objects import create_sample_course
         course1 = create_sample_course("Computer Science 101", "CS101", school)
         course2 = create_sample_course("Mathematics 201", "MATH201", school)
         course3 = create_sample_course("Physics 301", "PHYS301", school)

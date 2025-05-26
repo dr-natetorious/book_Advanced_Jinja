@@ -19,7 +19,7 @@ from datetime import date
 
 from sqlmodel import Session, create_engine
 
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Course,
     CourseStatus,
     Enrollment,

@@ -18,7 +18,7 @@ from tests.conftest import (  # Import the utility functions from conftest
 
 # Import business objects for type checking (these are assumed to be available
 # due to the previous conftest.py refactoring that removed the try-except)
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Course,
     Enrollment,
     EnrollmentStatus,

@@ -12,31 +12,33 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from smart_templates.fastapi_integration import SmartFastApiTemplates
-from tests.api.app import app as test_app
-from tests.api.routes.schools import setup_school_routes
-from tests.api.routes.students import setup_student_routes
-from tests.models.business_objects import EnrollmentStatus
+from university.models.business_objects import EnrollmentStatus
+
+
+@pytest.fixture
+def integration_app(templates_dir):
+    """Create test app with all routes."""
+    app = FastAPI(title="Integration Test App")
+    templates = SmartFastApiTemplates(str(templates_dir), debug_mode=True)
+    
+    # Import and setup routes
+    from university.api.routes.schools import setup_school_routes
+    from university.api.routes.students import setup_student_routes
+    
+    app.include_router(setup_school_routes(templates))
+    app.include_router(setup_student_routes(templates))
+    
+    return app
+
+
+@pytest.fixture
+def client(integration_app):
+    """Test client for integration app."""
+    return TestClient(integration_app)
 
 
 class TestFullStackIntegration:
     """Complete FastAPI + SmartTemplates integration tests."""
-
-    @pytest.fixture
-    def integration_app(self, templates_dir):
-        """Create test app with all routes."""
-        app = FastAPI(title="Integration Test App")
-        templates = SmartFastApiTemplates(str(templates_dir), debug_mode=True)
-        
-        # Include route modules
-        app.include_router(setup_school_routes(templates))
-        app.include_router(setup_student_routes(templates))
-        
-        return app
-
-    @pytest.fixture
-    def client(self, integration_app):
-        """Test client for integration app."""
-        return TestClient(integration_app)
 
     def test_content_negotiation_html_vs_json(self, client):
         """Test content negotiation works across routes."""
@@ -325,7 +327,8 @@ class TestRealWorldApp:
     @pytest.fixture
     def real_app_client(self):
         """Client for the real test app."""
-        return TestClient(test_app)
+        from university.api.app import app
+        return TestClient(app)
 
     def test_root_endpoint(self, real_app_client):
         """Test root endpoint."""

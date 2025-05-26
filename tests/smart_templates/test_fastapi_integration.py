@@ -29,7 +29,7 @@ from pydantic import BaseModel
 
 from smart_templates.core import RenderError, SmartTemplateRegistry, TemplateErrorDetail
 from smart_templates.fastapi_integration import SmartFastApiTemplates, create_smart_response
-from tests.models.business_objects import (
+from university.models.business_objects import (
     Course,
     EnrollmentStatus,
     School,

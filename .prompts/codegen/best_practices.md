@@ -208,7 +208,7 @@ def register_simple(self, obj_type: type, *, template_name: str | None = None, *
 from tests.models.test_sqlmodel_objects import (...)
 
 # ✅ NEW (correct):
-from tests.models.business_objects import (...)
+from university.models.business_objects import (...)
 ```
 
 #### **3. Function Name Mismatches**
@@ -249,7 +249,7 @@ def sample_test_data() -> tuple[list[Any], list[Any], list[Any], list[Any]]:
 ```python
 # Always verify imports match actual file structure:
 from tests import TEST_TEMPLATES_DIR, TEST_DATA_DIR, TEST_OUTPUT_DIR
-from tests.models.business_objects import (  # NOT test_sqlmodel_objects
+from university.models.business_objects import (  # NOT test_sqlmodel_objects
     School, Course, Student, Enrollment,
     EnrollmentStatus, CourseStatus,
     create_complete_test_data,  # Use ACTUAL function names
@@ -605,7 +605,7 @@ def generate_fixtures(self, objects: list[Any], *, template_name: str, output_fi
 from tests import TEST_TEMPLATES_DIR, TEST_DATA_DIR, TEST_OUTPUT_DIR
 
 # VERIFIED: Use correct model imports  
-from tests.models.business_objects import (  # NOT test_sqlmodel_objects
+from university.models.business_objects import (  # NOT test_sqlmodel_objects
     School, Course, Student, Enrollment,
     EnrollmentStatus, CourseStatus,
     create_complete_test_data,
