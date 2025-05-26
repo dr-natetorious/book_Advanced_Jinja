@@ -1,4 +1,4 @@
-"""FastAPI integration for SmartTemplates."""
+"""FastAPI integration for SmartTemplates - HTTP decorators and response handling."""
 
 from __future__ import annotations
 
@@ -174,13 +174,15 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
     """
 
     def smart_response(
-        template_name: str, *, error_template: str = "error.html"
+        template_name: str | None = None, 
+        *, 
+        error_template: str = "error.html"
     ) -> Callable:
         """
         Decorator that automatically renders templates for HTML requests and returns JSON for API requests.
 
         Args:
-            template_name: Template file name to render for HTML responses
+            template_name: Template file name to render for HTML responses (None for registry-based resolution)
             error_template: Template to use for error responses
 
         Returns:
@@ -208,14 +210,26 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                             return JSONResponse(content=data)
 
                     else:
-                        # Prepare template context
+                        # Prepare template context (defensive copy)
                         template_context = templates_instance.prepare_context(data)
-                        template_context["request"] = request  # Add request to context
+                        # CRITICAL: Make another copy before adding request to avoid mutation
+                        render_context = template_context.copy()
+                        render_context["request"] = request
 
-                        # Render template
-                        content, render_error = templates_instance.render_safe(
-                            template_name, template_context
-                        )
+                        # Determine which template to use
+                        content = ""
+                        render_error = None
+                        
+                        if template_name:
+                            # Use explicit template
+                            content, render_error = templates_instance.render_safe(
+                                template_name, render_context
+                            )
+                        else:
+                            # Use registry-based resolution (includes auto-generation if enabled)
+                            content, render_error = templates_instance.render_obj(
+                                data, render_context
+                            )
 
                         if render_error:
                             # Pass render error directly to error template
@@ -224,7 +238,7 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                                 "request": request,
                                 "debug_mode": templates_instance.debug_mode,
                                 "original_template": template_name,
-                                "original_context_keys": list(template_context.keys())
+                                "original_context_keys": list(render_context.keys())
                             }
 
                             error_content, error_render_error = (
@@ -247,7 +261,7 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
 
                 except Exception as e:
                     templates_instance._logger.exception(
-                        "Unhandled exception in smart_response for %s", template_name
+                        "Unhandled exception in smart_response for %s", template_name or "registry-resolved"
                     )
 
                     # Create structured error using our BaseModel system
@@ -257,14 +271,14 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                     error_detail = TemplateErrorDetail(
                         error_type=type(e).__name__,
                         message=str(e),
-                        template_name=template_name,
+                        template_name=template_name or "registry-resolved",
                         stack_trace=traceback.format_exc().splitlines()
                     )
                     structured_error = RenderError(
                         error=error_detail,
                         debug_info={
                             "function": func.__name__,
-                            "route_template": template_name
+                            "route_template": template_name or "registry-resolved"
                         }
                     )
 
@@ -337,28 +351,17 @@ def create_smart_templates_dependency(config: SmartTemplateConfig) -> Callable:
 
 # Usage examples:
 # 
-# # Basic usage
-# templates = SmartFastApiTemplates("templates/", debug_mode=True)
+# # Registry-based resolution (auto-generation happens in registry)
+# templates = SmartFastApiTemplates("templates/")
 # smart_response = create_smart_response(templates)
 #
 # @app.get("/users/{user_id}")
-# @smart_response("user/profile.html")
+# @smart_response()  # Registry resolves template (may auto-generate)
 # async def get_user(request: Request, user_id: int):
 #     return User.get(user_id)
 #
-# # Advanced usage with dependency injection
-# config = SmartTemplateConfig("templates/", debug_mode=True)
-# get_templates = create_smart_templates_dependency(config)
-#
-# @app.get("/users/{user_id}")
-# async def get_user(
-#     request: Request,
-#     user_id: int, 
-#     templates: SmartFastApiTemplates = Depends(get_templates)
-# ):
-#     user = User.get(user_id)
-#     if templates.wants_json_response(request):
-#         return user
-#     
-#     content, error = templates.render_obj(user, {"request": request})
-#     return HTMLResponse(content)
+# # Explicit template (existing behavior)
+# @app.get("/users/{user_id}/profile")
+# @smart_response("user/profile.html")
+# async def get_user_profile(request: Request, user_id: int):
+#     return User.get(user_id)

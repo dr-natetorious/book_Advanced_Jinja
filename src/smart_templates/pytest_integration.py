@@ -1,3 +1,5 @@
+"""Pytest integration for SmartTemplates - Test automation and reporting."""
+
 from __future__ import annotations
 
 import logging
@@ -5,11 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .core import RenderError, SmartTemplateRegistry, SmartTemplates
+from .core import RenderError, SmartTemplateRegistry, SmartTemplates, TemplateErrorDetail
 
 try:
     import pytest
-
     PYTEST_AVAILABLE = True
 except ImportError:
     PYTEST_AVAILABLE = False
@@ -30,30 +31,42 @@ class SmartPytestTemplates(SmartTemplates):
         output_dir: str = "test_reports",
         **kwargs: Any,
     ) -> None:
+        """
+        Initialize SmartPytestTemplates.
+
+        Args:
+            directory: Template directory path
+            registry: Template registry instance
+            debug_mode: Enable debug mode for enhanced error reporting
+            output_dir: Directory for generated test files and reports
+            **kwargs: Additional Jinja2 environment options
+        """
         super().__init__(directory, registry=registry, debug_mode=debug_mode, **kwargs)
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.output_dir = output_dir
-
-        # Ensure output directory exists
-        Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _prepare_test_context(self, base_context: dict[str, Any]) -> dict[str, Any]:
         """Prepare context with pytest-specific variables."""
-        template_context = base_context.copy()  # Defensive copy
+        # CRITICAL: Defensive copy - never mutate input
+        template_context = base_context.copy()
         template_context.setdefault("debug_mode", self.debug_mode)
         template_context.setdefault("timestamp", datetime.now())
-        template_context.setdefault(
-            "pytest_version", pytest.__version__ if PYTEST_AVAILABLE else "unknown"
-        )
-        template_context.setdefault("output_dir", self.output_dir)
+        template_context.setdefault("output_dir", str(self.output_dir))
+        
+        # Add pytest version if available
+        if PYTEST_AVAILABLE:
+            template_context.setdefault("pytest_version", pytest.__version__)
+        else:
+            template_context.setdefault("pytest_version", "not_available")
+        
         return template_context
 
-    def _write_output_file(self, content: str, filepath: str) -> bool:
+    def _write_output_file(self, content: str, filepath: Path) -> bool:
         """Write generated content to file with error handling."""
         try:
-            file_path = Path(filepath)
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(content, encoding="utf-8")
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            filepath.write_text(content, encoding="utf-8")
             self._logger.info(f"Generated test file: {filepath}")
             return True
         except Exception as e:
@@ -79,6 +92,7 @@ class SmartPytestTemplates(SmartTemplates):
             Tuple of (rendered_content, error_or_none)
         """
         try:
+            # CRITICAL: Defensive copy of input context
             template_context = self._prepare_test_context(test_results)
 
             # Add test-specific context
@@ -116,16 +130,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"Test report written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in test report generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -159,6 +171,7 @@ class SmartPytestTemplates(SmartTemplates):
                 "object_types": list(set(type(obj).__name__ for obj in model_objects)),
             }
 
+            # CRITICAL: Defensive copy through _prepare_test_context
             template_context = self._prepare_test_context(base_context)
 
             content, error = self.render_safe(fixture_template, template_context)
@@ -170,16 +183,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"Pytest fixtures written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in pytest fixture generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -216,6 +227,7 @@ class SmartPytestTemplates(SmartTemplates):
                 "object_types": list(set(type(obj).__name__ for obj in objects)),
             }
 
+            # CRITICAL: Defensive copy through _prepare_test_context
             template_context = self._prepare_test_context(base_context)
 
             content, error = self.render_safe(test_template, template_context)
@@ -227,16 +239,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"Test cases written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in test case generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -266,11 +276,13 @@ class SmartPytestTemplates(SmartTemplates):
             Tuple of (rendered_content, error_or_none)
         """
         try:
-            template_context = self._prepare_test_context(test_data)
+            # CRITICAL: Create copy before modifying
+            base_context = test_data.copy()
+            base_context.setdefault("format_type", format_type)
+            base_context.setdefault("doc_type", "test_documentation")
 
-            # Add documentation-specific context
-            template_context.setdefault("format_type", format_type)
-            template_context.setdefault("doc_type", "test_documentation")
+            # CRITICAL: Defensive copy through _prepare_test_context
+            template_context = self._prepare_test_context(base_context)
 
             content, error = self.render_safe(doc_template, template_context)
 
@@ -281,16 +293,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"Test documentation written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in test documentation generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -324,6 +334,7 @@ class SmartPytestTemplates(SmartTemplates):
                 "spec_count": len(object_specs),
             }
 
+            # CRITICAL: Defensive copy through _prepare_test_context
             template_context = self._prepare_test_context(base_context)
 
             content, error = self.render_safe(mock_template, template_context)
@@ -335,16 +346,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"Mock objects written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in mock object generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -382,6 +391,7 @@ class SmartPytestTemplates(SmartTemplates):
                 "methods": list(set(ep.get("method", "GET") for ep in api_endpoints)),
             }
 
+            # CRITICAL: Defensive copy through _prepare_test_context
             template_context = self._prepare_test_context(base_context)
 
             content, error = self.render_safe(api_test_template, template_context)
@@ -393,16 +403,14 @@ class SmartPytestTemplates(SmartTemplates):
                 return "", error
 
             if output_file:
-                output_path = Path(self.output_dir) / output_file
-                if self._write_output_file(content, str(output_path)):
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
                     self._logger.info(f"API tests written to: {output_path}")
 
             return content, None
 
         except Exception as e:
             self._logger.exception("Unexpected error in API test generation")
-            from .core import TemplateErrorDetail
-
             error = TemplateErrorDetail(
                 error_type=type(e).__name__,
                 message=str(e),
@@ -411,8 +419,132 @@ class SmartPytestTemplates(SmartTemplates):
             )
             return "", RenderError(error=error)
 
+    def generate_performance_tests(
+        self,
+        performance_specs: list[dict[str, Any]],
+        *,
+        perf_template: str = "performance_tests.py.j2",
+        framework: str = "pytest-benchmark",
+        output_file: str | None = None,
+    ) -> tuple[str, RenderError | None]:
+        """
+        Generate performance test cases from specifications.
 
-# Usage example:
-# registry = SmartTemplateRegistry()
-# pytest_templates = SmartPytestTemplates(directory="test_templates", registry=registry)
-# content, error = pytest_templates.generate_test_report(test_results, output_file="report.html")
+        Args:
+            performance_specs: List of performance test specifications
+            perf_template: Template to use for performance test generation
+            framework: Performance testing framework to use
+            output_file: Optional output file path
+
+        Returns:
+            Tuple of (rendered_content, error_or_none)
+        """
+        try:
+            base_context = {
+                "perf_specs": performance_specs,
+                "framework": framework,
+                "test_type": "performance_tests",
+                "spec_count": len(performance_specs),
+            }
+
+            # CRITICAL: Defensive copy through _prepare_test_context
+            template_context = self._prepare_test_context(base_context)
+
+            content, error = self.render_safe(perf_template, template_context)
+
+            if error:
+                self._logger.error(
+                    f"Failed to render performance tests template: {error.error.message}"
+                )
+                return "", error
+
+            if output_file:
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
+                    self._logger.info(f"Performance tests written to: {output_path}")
+
+            return content, None
+
+        except Exception as e:
+            self._logger.exception("Unexpected error in performance test generation")
+            error = TemplateErrorDetail(
+                error_type=type(e).__name__,
+                message=str(e),
+                template_name=perf_template,
+                context_data={"spec_count": len(performance_specs)},
+            )
+            return "", RenderError(error=error)
+
+    def generate_test_matrix(
+        self,
+        matrix_config: dict[str, Any],
+        *,
+        matrix_template: str = "test_matrix.py.j2",
+        output_file: str | None = None,
+    ) -> tuple[str, RenderError | None]:
+        """
+        Generate test matrix for cross-platform/cross-version testing.
+
+        Args:
+            matrix_config: Configuration for test matrix generation
+            matrix_template: Template to use for matrix generation
+            output_file: Optional output file path
+
+        Returns:
+            Tuple of (rendered_content, error_or_none)
+        """
+        try:
+            # CRITICAL: Create copy before modifying
+            base_context = matrix_config.copy()
+            base_context.setdefault("matrix_type", "cross_platform")
+
+            # CRITICAL: Defensive copy through _prepare_test_context
+            template_context = self._prepare_test_context(base_context)
+
+            content, error = self.render_safe(matrix_template, template_context)
+
+            if error:
+                self._logger.error(
+                    f"Failed to render test matrix template: {error.error.message}"
+                )
+                return "", error
+
+            if output_file:
+                output_path = self.output_dir / output_file
+                if self._write_output_file(content, output_path):
+                    self._logger.info(f"Test matrix written to: {output_path}")
+
+            return content, None
+
+        except Exception as e:
+            self._logger.exception("Unexpected error in test matrix generation")
+            error = TemplateErrorDetail(
+                error_type=type(e).__name__,
+                message=str(e),
+                template_name=matrix_template,
+                context_data=self._extract_context_types(matrix_config),
+            )
+            return "", RenderError(error=error)
+
+
+# Usage examples:
+# 
+# # Basic test report generation
+# pytest_templates = SmartPytestTemplates("test_templates/")
+# content, error = pytest_templates.generate_test_report(
+#     test_results, 
+#     output_file="report.html"
+# )
+#
+# # Generate fixtures from business objects
+# content, error = pytest_templates.generate_pytest_fixtures(
+#     [user1, user2, order1],
+#     output_file="conftest.py"
+# )
+#
+# # Generate parametrized test cases
+# content, error = pytest_templates.generate_test_cases(
+#     business_objects,
+#     parametrize=True,
+#     output_file="test_generated.py"
+# )
