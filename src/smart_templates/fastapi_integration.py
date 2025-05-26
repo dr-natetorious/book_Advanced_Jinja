@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import traceback
+import warnings
 from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
+from pathlib import Path
 from typing import Any
 
+from jinja2 import FileSystemLoader
 from pydantic import BaseModel
 
-from .core import RenderError, SmartTemplateRegistry, SmartTemplates
+from .core import RenderError, RegistrationConfig, RegistrationType, SmartTemplateRegistry, SmartTemplates
 
 try:
     from fastapi import Request
@@ -32,10 +34,11 @@ class SmartFastApiTemplates(SmartTemplates):
     def __init__(
         self,
         directory: str,
-        *,
+        *,  # CRITICAL: Force keyword-only arguments
         registry: SmartTemplateRegistry | None = None,
         debug_mode: bool = False,
         api_path_prefix: str = "/api/",
+        auto_reload: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -46,42 +49,78 @@ class SmartFastApiTemplates(SmartTemplates):
             registry: Template registry instance
             debug_mode: Enable debug mode for enhanced error reporting
             api_path_prefix: URL prefix that indicates API requests (for content negotiation)
+            auto_reload: Auto-reload templates on file changes (defaults to debug_mode)
             **kwargs: Additional Jinja2 environment options
         """
+        # Set auto_reload based on debug_mode if not explicitly provided
+        if auto_reload is None:
+            auto_reload = debug_mode
+            
+        kwargs.setdefault("auto_reload", auto_reload)
+        
         super().__init__(directory, registry=registry, debug_mode=debug_mode, **kwargs)
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.api_path_prefix = api_path_prefix
+        
+        # Register core error templates
+        self._register_core_templates()
+
+    def _register_core_templates(self) -> None:
+        """Register core error handling templates."""
+        # Add core templates directory to loader search path
+        core_templates_dir = Path(__file__).parent / "templates" / "fastapi"
+        
+        if core_templates_dir.exists():
+            # Prepend core templates to search path for fallback
+            current_paths = self.env.loader.searchpath
+            self.env.loader = FileSystemLoader([str(core_templates_dir)] + current_paths)
+        
+        # Register error handling templates
+        error_config = RegistrationConfig(
+            name="error.html",
+            registration_type=RegistrationType.TEMPLATE,
+            target="error.html"
+        )
+        self.registry.register(RenderError, config=error_config)
 
     def prepare_context(
-        self, data: BaseModel | dict[str, Any] | Any, request: Request
+        self, data: BaseModel | dict[str, Any] | Any, request: Request | None = None
     ) -> dict[str, Any]:
         """
-        Convert function return data into a template context dictionary with FastAPI Request.
+        Convert function return data into a template context dictionary.
 
         Args:
             data: Function return value to convert to template context
-            request: FastAPI Request object
+            request: FastAPI Request object (deprecated - use dependency injection)
 
         Returns:
             Dictionary suitable for template rendering
         """
+        if request is not None:
+            warnings.warn(
+                "Passing request to prepare_context is deprecated. "
+                "Use FastAPI dependency injection instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+
+        # CRITICAL: Always copy, never mutate input
         if isinstance(data, BaseModel):
             if hasattr(data, "to_template_dict"):
-                context = data.to_template_dict()
+                template_context = data.to_template_dict()
             else:
-                context = data.model_dump()
+                template_context = data.model_dump()
         elif isinstance(data, dict):
-            context = data.copy()
+            template_context = data.copy()  # Defensive copy
         else:
-            context = {"data": data}
+            template_context = {"data": data}
 
-        # Add FastAPI-specific context
-        context.setdefault("request", request)
-        context.setdefault("current_time", datetime.now())
+        # Add framework-specific context safely
+        template_context.setdefault("current_time", datetime.now())
+        
+        return template_context
 
-        return context
-
-    def _wants_json_response(self, request: Request) -> bool:
+    def wants_json_response(self, request: Request) -> bool:
         """
         Determine if the request expects a JSON response based on headers and URL.
 
@@ -105,83 +144,27 @@ class SmartFastApiTemplates(SmartTemplates):
 
         return wants_json or is_api_path
 
-    def create_fallback_error_html(
-        self, *, error: RenderError | None = None, message: str = "An error occurred"
-    ) -> str:
+    def set_debug_mode(self, debug: bool = True, auto_reload: bool | None = None) -> None:
         """
-        Create a basic HTML error page when template rendering fails.
-
+        Enable or disable debug mode with template auto-reloading.
+        
         Args:
-            error: Optional RenderError with detailed information
-            message: Fallback error message
-
-        Returns:
-            HTML error page content
+            debug: Enable debug mode
+            auto_reload: Enable template auto-reloading (defaults to debug value)
         """
-        if self.debug_mode and error:
-            stack_trace = "\n".join(error.error.stack_trace or [])
-            return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Template Error</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 40px; }}
-        .error-container {{ max-width: 800px; }}
-        .error-type {{ color: #d73a49; font-weight: bold; }}
-        .stack-trace {{ background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px;
-                       padding: 16px; overflow-x: auto; white-space: pre; font-family: monospace; }}
-        .metadata {{ background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px;
-                    padding: 12px; margin: 16px 0; }}
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <h1>Template Rendering Error</h1>
-        <div class="metadata">
-            <p><strong>Type:</strong> <span class="error-type">{error.error.error_type}</span></p>
-            <p><strong>Message:</strong> {error.error.message}</p>
-            <p><strong>Template:</strong> {error.error.template_name or 'Unknown'}</p>
-            {f'<p><strong>Macro:</strong> {error.error.macro_name}</p>' if error.error.macro_name else ''}
-            <p><strong>Timestamp:</strong> {error.error.timestamp.isoformat()}</p>
-        </div>
-        <h2>Stack Trace</h2>
-        <div class="stack-trace">{stack_trace}</div>
-    </div>
-</body>
-</html>"""
-        else:
-            display_message = (
-                message
-                if self.debug_mode
-                else "An error occurred while processing your request."
-            )
-            return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Error</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-               margin: 40px; text-align: center; color: #586069; }}
-        .error-container {{ max-width: 600px; margin: 0 auto; }}
-        h1 {{ color: #24292e; }}
-    </style>
-</head>
-<body>
-    <div class="error-container">
-        <h1>Server Error</h1>
-        <p>{display_message}</p>
-    </div>
-</body>
-</html>"""
+        super().set_debug_mode(debug)
+        
+        if auto_reload is None:
+            auto_reload = debug
+            
+        # Update loader for auto-reload
+        if hasattr(self.env.loader, 'auto_reload'):
+            self.env.loader.auto_reload = auto_reload
 
 
 def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable:
     """
-    Factory function that creates a smart_response decorator bound to a SmartFastApiTemplates instance.
+    Factory function that creates a smart_response decorator.
 
     Args:
         templates_instance: SmartFastApiTemplates instance to use for rendering
@@ -217,7 +200,7 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                         data = func(request, *args, **kwargs)
 
                     # Determine response type based on request characteristics
-                    if templates_instance._wants_json_response(request):
+                    if templates_instance.wants_json_response(request):
                         # Return JSON response
                         if isinstance(data, BaseModel):
                             return JSONResponse(content=data.model_dump())
@@ -225,10 +208,9 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                             return JSONResponse(content=data)
 
                     else:
-                        # Prepare template context with FastAPI-specific handling
-                        template_context = templates_instance.prepare_context(
-                            data, request
-                        )
+                        # Prepare template context
+                        template_context = templates_instance.prepare_context(data)
+                        template_context["request"] = request  # Add request to context
 
                         # Render template
                         content, render_error = templates_instance.render_safe(
@@ -236,31 +218,27 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
                         )
 
                         if render_error:
-                            # Try to render error template
-                            error_context = templates_instance.prepare_context(
-                                {
-                                    "error": render_error,
-                                    "original_context": template_context,
-                                    "debug_mode": templates_instance.debug_mode,
-                                },
-                                request,
-                            )
+                            # Pass render error directly to error template
+                            error_context = {
+                                "error": render_error,
+                                "request": request,
+                                "debug_mode": templates_instance.debug_mode,
+                                "original_template": template_name,
+                                "original_context_keys": list(template_context.keys())
+                            }
 
                             error_content, error_render_error = (
-                                templates_instance.render_safe(
-                                    error_template, error_context
-                                )
+                                templates_instance.render_safe(error_template, error_context)
                             )
 
                             if error_render_error:
-                                # Fallback to basic HTML error page
-                                fallback_content = (
-                                    templates_instance.create_fallback_error_html(
-                                        error=render_error
-                                    )
+                                # Last resort: render error as RenderError object
+                                fallback_content, _ = templates_instance.render_obj(
+                                    render_error, {"request": request}
                                 )
                                 return HTMLResponse(
-                                    content=fallback_content, status_code=500
+                                    content=fallback_content or "Template rendering failed",
+                                    status_code=500
                                 )
 
                             return HTMLResponse(content=error_content, status_code=500)
@@ -269,30 +247,38 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
 
                 except Exception as e:
                     templates_instance._logger.exception(
-                        "Unhandled exception in smart_response"
+                        "Unhandled exception in smart_response for %s", template_name
                     )
 
-                    error_data = {
-                        "error": {
-                            "type": type(e).__name__,
-                            "message": str(e),
-                            "timestamp": datetime.now().isoformat(),
+                    # Create structured error using our BaseModel system
+                    import traceback
+                    from .core import TemplateErrorDetail
+                    
+                    error_detail = TemplateErrorDetail(
+                        error_type=type(e).__name__,
+                        message=str(e),
+                        template_name=template_name,
+                        stack_trace=traceback.format_exc().splitlines()
+                    )
+                    structured_error = RenderError(
+                        error=error_detail,
+                        debug_info={
+                            "function": func.__name__,
+                            "route_template": template_name
                         }
-                    }
-
-                    if templates_instance.debug_mode:
-                        error_data["error"]["stack_trace"] = (
-                            traceback.format_exc().splitlines()
-                        )
+                    )
 
                     # Return appropriate error response based on content negotiation
-                    if templates_instance._wants_json_response(request):
-                        return JSONResponse(status_code=500, content=error_data)
+                    if templates_instance.wants_json_response(request):
+                        return JSONResponse(status_code=500, content=structured_error.model_dump())
                     else:
-                        error_html = templates_instance.create_fallback_error_html(
-                            message=str(e)
+                        error_html, _ = templates_instance.render_obj(
+                            structured_error, {"request": request}
                         )
-                        return HTMLResponse(content=error_html, status_code=500)
+                        return HTMLResponse(
+                            content=error_html or f"<h1>Error: {e}</h1>", 
+                            status_code=500
+                        )
 
             return wrapper
 
@@ -301,13 +287,78 @@ def create_smart_response(templates_instance: SmartFastApiTemplates) -> Callable
     return smart_response
 
 
-# Usage example:
-# registry = SmartTemplateRegistry()
-# registry.register(User, template_name="user/profile.html", macro_name="render_user")
-# templates = SmartFastApiTemplates(directory="templates", registry=registry, debug_mode=True)
+# FastAPI-native patterns for advanced integration
+class SmartTemplateConfig:
+    """Configuration for SmartTemplates FastAPI integration."""
+    
+    def __init__(
+        self,
+        template_dir: str,
+        *,
+        debug_mode: bool = False,
+        api_prefix: str = "/api/",
+        default_error_template: str = "error.html",
+        auto_reload: bool | None = None
+    ):
+        self.template_dir = template_dir
+        self.debug_mode = debug_mode
+        self.api_prefix = api_prefix
+        self.default_error_template = default_error_template
+        self.auto_reload = auto_reload
+
+
+def create_smart_templates_dependency(config: SmartTemplateConfig) -> Callable:
+    """
+    Create a FastAPI dependency for SmartTemplates.
+    
+    Usage:
+        config = SmartTemplateConfig("templates/")
+        get_templates = create_smart_templates_dependency(config)
+        
+        @app.get("/users/{user_id}")
+        async def get_user(user_id: int, templates: SmartFastApiTemplates = Depends(get_templates)):
+            # Use templates instance
+    """
+    templates_instance = None
+    
+    def get_templates() -> SmartFastApiTemplates:
+        nonlocal templates_instance
+        if templates_instance is None:
+            templates_instance = SmartFastApiTemplates(
+                config.template_dir,
+                debug_mode=config.debug_mode,
+                api_path_prefix=config.api_prefix,
+                auto_reload=config.auto_reload
+            )
+        return templates_instance
+    
+    return get_templates
+
+
+# Usage examples:
+# 
+# # Basic usage
+# templates = SmartFastApiTemplates("templates/", debug_mode=True)
 # smart_response = create_smart_response(templates)
 #
 # @app.get("/users/{user_id}")
 # @smart_response("user/profile.html")
 # async def get_user(request: Request, user_id: int):
-#     return {"user": get_user_by_id(user_id)}
+#     return User.get(user_id)
+#
+# # Advanced usage with dependency injection
+# config = SmartTemplateConfig("templates/", debug_mode=True)
+# get_templates = create_smart_templates_dependency(config)
+#
+# @app.get("/users/{user_id}")
+# async def get_user(
+#     request: Request,
+#     user_id: int, 
+#     templates: SmartFastApiTemplates = Depends(get_templates)
+# ):
+#     user = User.get(user_id)
+#     if templates.wants_json_response(request):
+#         return user
+#     
+#     content, error = templates.render_obj(user, {"request": request})
+#     return HTMLResponse(content)

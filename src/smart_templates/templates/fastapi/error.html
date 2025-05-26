@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Error - SmartTemplates</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #212529;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            padding: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .error-type {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 8px;
+            display: inline-block;
+        }
+        .content {
+            padding: 20px;
+        }
+        .error-details {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .metadata {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 8px 16px;
+            margin: 16px 0;
+        }
+        .metadata dt {
+            font-weight: 600;
+            color: #6c757d;
+        }
+        .metadata dd {
+            margin: 0;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 14px;
+        }
+        .stack-trace {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            margin: 16px 0;
+        }
+        .context-data {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 16px 0;
+        }
+        .context-data h4 {
+            margin: 0 0 8px 0;
+            color: #1976d2;
+        }
+        .context-list {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            margin: 0;
+        }
+        .help-section {
+            background: #f0f8fe;
+            border: 1px solid #7dd3fc;
+            border-radius: 4px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+        .help-section h3 {
+            margin: 0 0 12px 0;
+            color: #0284c7;
+        }
+        .btn {
+            background: #0d6efd;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 4px 4px 4px 0;
+            font-size: 14px;
+        }
+        .btn:hover {
+            background: #0b5ed7;
+        }
+        .production-mode {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if debug_mode and error %}
+            <div class="header">
+                <h1>Template Rendering Error</h1>
+                <span class="error-type">{{ error.error.error_type }}</span>
+            </div>
+            
+            <div class="content">
+                <div class="error-details">
+                    <strong>{{ error.error.message }}</strong>
+                </div>
+                
+                <dl class="metadata">
+                    {% if error.error.template_name %}
+                    <dt>Template:</dt>
+                    <dd>{{ error.error.template_name }}</dd>
+                    {% endif %}
+                    
+                    {% if error.error.macro_name %}
+                    <dt>Macro:</dt>
+                    <dd>{{ error.error.macro_name }}</dd>
+                    {% endif %}
+                    
+                    {% if error.error.line_number %}
+                    <dt>Line:</dt>
+                    <dd>{{ error.error.line_number }}</dd>
+                    {% endif %}
+                    
+                    <dt>Timestamp:</dt>
+                    <dd>{{ error.error.timestamp.isoformat() }}</dd>
+                    
+                    {% if original_template %}
+                    <dt>Original Template:</dt>
+                    <dd>{{ original_template }}</dd>
+                    {% endif %}
+                </dl>
+                
+                {% if error.error.context_data %}
+                <div class="context-data">
+                    <h4>Template Context Variables</h4>
+                    <ul class="context-list">
+                        {% for key, type_info in error.error.context_data.items() %}
+                        <li><strong>{{ key }}:</strong> {{ type_info }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                {% if original_context_keys %}
+                <div class="context-data">
+                    <h4>Available Context Keys</h4>
+                    <ul class="context-list">
+                        {% for key in original_context_keys %}
+                        <li>{{ key }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                {% if error.error.stack_trace %}
+                <h3>Stack Trace</h3>
+                <div class="stack-trace">{{ error.error.stack_trace | join('\n') }}</div>
+                {% endif %}
+                
+                <div class="help-section">
+                    <h3>Quick Fixes</h3>
+                    <p>Common solutions for template errors:</p>
+                    <a href="#" class="btn" onclick="alert('Check template file exists and path is correct')">Check Template Path</a>
+                    <a href="#" class="btn" onclick="alert('Verify all variables are defined in context')">Check Variables</a>
+                    <a href="#" class="btn" onclick="alert('Review template syntax for Jinja2 compliance')">Validate Syntax</a>
+                </div>
+            </div>
+        {% else %}
+            <div class="header">
+                <h1>Server Error</h1>
+                <span class="error-type">Template Processing Failed</span>
+            </div>
+            
+            <div class="production-mode">
+                <h2>An error occurred while processing your request.</h2>
+                <p>Please try again later or contact support if the problem persists.</p>
+                {% if request %}
+                <p><small>Request ID: {{ request.headers.get('x-request-id', 'unknown') }}</small></p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
