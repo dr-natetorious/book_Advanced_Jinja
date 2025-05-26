@@ -23,8 +23,7 @@ from smart_templates.fastapi_integration import (
 # Import test directory constants
 from tests import TEST_TEMPLATES_DIR
 
-# Import test models - CRITICAL: These models are expected to be available for tests.
-# If this import fails, it indicates a fundamental issue with the test setup.
+# Import test models
 from tests.models.business_objects import (
     Course,
     Enrollment,
@@ -36,16 +35,12 @@ from tests.models.business_objects import (
     create_sample_student,
 )
 
-# No need for models_available flag; if the import above fails, pytest will halt.
-
 
 @pytest.fixture
 def templates_dir(tmp_path: Path) -> Path:
     """
     Create a temporary directory with test templates.
-    Copies templates from TEST_TEMPLATES_DIR. If TEST_TEMPLATES_DIR
-    does not exist, this fixture will fail *unless* TEST_TEMPLATES_DIR
-    is intentionally meant to be optional, which is unlikely for core validation.
+    Copies templates from TEST_TEMPLATES_DIR.
     """
     templates_output_dir = tmp_path / "templates"
     templates_output_dir.mkdir(parents=True, exist_ok=True)
@@ -54,21 +49,13 @@ def templates_dir(tmp_path: Path) -> Path:
 
     # Ensure source templates exist and copy them
     if not fixtures_templates_source.exists():
-        # This is a critical error if TEST_TEMPLATES_DIR is mandatory for models.
-        # Consider making this fail explicitly or ensure your CI/local setup
-        # always has these files.
-        # For robustness, we can fall back to minimal here *if* you intend
-        # that templates sometimes don't match the full business objects.
-        # However, for "main validation," these templates should exist.
         _create_minimal_templates(templates_output_dir)
         pytest.fail(
             f"TEST_TEMPLATES_DIR '{fixtures_templates_source}' not found. "
-            "Cannot set up full test templates. Falling back to minimal, but this "
-            "might indicate a missing dependency or asset."
+            "Cannot set up full test templates. Created minimal fallback."
         )
     else:
         import shutil
-
         shutil.copytree(
             fixtures_templates_source, templates_output_dir, dirs_exist_ok=True
         )
@@ -77,14 +64,7 @@ def templates_dir(tmp_path: Path) -> Path:
 
 
 def _create_minimal_templates(templates_dir: Path) -> None:
-    """
-    Create minimal template files for testing when fixtures aren't available
-    or as a fallback.
-    NOTE: If TEST_TEMPLATES_DIR is central to your project, this function should
-    ideally only be called *if* that directory is truly missing, and you need
-    a basic sanity check. For full model validation, the specific templates
-    in TEST_TEMPLATES_DIR are expected.
-    """
+    """Create minimal template files for testing when fixtures aren't available."""
     # Base template
     (templates_dir / "base.html").write_text(
         """<!DOCTYPE html>
@@ -197,14 +177,49 @@ def _create_minimal_templates(templates_dir: Path) -> None:
 {% endblock %}"""
     )
 
+    # Course templates
+    course_dir = templates_dir / "course"
+    course_dir.mkdir(exist_ok=True)
+
+    (course_dir / "detail.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}{{ object.title }} Detail{% endblock %}
+{% block content %}
+<h1>{{ object.title }} ({{ object.course_code }})</h1>
+<p>Description: {{ object.description }}</p>
+<p>Instructor: {{ object.instructor_name }}</p>
+<p>Enrolled: {{ object.enrolled_students }} / {{ object.max_students }}</p>
+{% endblock %}"""
+    )
+
+    (course_dir / "instructor_view.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}{{ object.title }} - Instructor View{% endblock %}
+{% block content %}
+<h1>Instructor View: {{ object.title }}</h1>
+<p>Course Code: {{ object.course_code }}</p>
+<p>Enrolled Students: {{ object.enrolled_students }}</p>
+<h2>Student List</h2>
+{% for enrollment in object.enrollments %}
+<p>{{ enrollment.student.name }} - {{ enrollment.status }}</p>
+{% endfor %}
+{% endblock %}"""
+    )
+
+    (course_dir / "student_view.html").write_text(
+        """{% extends "base.html" %}
+{% block title %}{{ object.course.title }} - Student View{% endblock %}
+{% block content %}
+<h1>Student View: {{ object.course.title }}</h1>
+<p>Your Progress: {{ object.progress_percentage }}%</p>
+<p>Status: {{ object.status }}</p>
+{% endblock %}"""
+    )
+
 
 @pytest.fixture
 def smart_registry() -> SmartTemplateRegistry:
-    """
-    Create a SmartTemplateRegistry with test configurations.
-    All template mappings are now unconditionally registered, as `business_objects`
-    are assumed present.
-    """
+    """Create a SmartTemplateRegistry with test configurations."""
     registry = SmartTemplateRegistry()
 
     # School templates
@@ -238,6 +253,7 @@ def smart_registry() -> SmartTemplateRegistry:
 
     return registry
 
+
 @pytest.fixture
 def smart_templates(
     templates_dir: Path, smart_registry: SmartTemplateRegistry
@@ -261,10 +277,10 @@ def smart_fastapi_templates(
     templates = SmartFastApiTemplates(
         directory=str(templates_dir),
         registry=smart_registry,
+        debug_mode=True,
         autoescape=True,
         enable_async=False,
     )
-    templates.set_debug_mode(True)
     return templates
 
 
@@ -273,7 +289,6 @@ def smart_pytest_templates(
     templates_dir: Path, smart_registry: SmartTemplateRegistry, tmp_path: Path
 ) -> Any:  # Would be SmartPytestTemplates when implemented
     """Create a SmartPytestTemplates instance for pytest integration testing."""
-    # This will be implemented when SmartPytestTemplates is created
     try:
         from smart_templates.pytest_integration import SmartPytestTemplates
 
@@ -285,7 +300,6 @@ def smart_pytest_templates(
         )
         return templates
     except ImportError:
-        # Return None if not implemented yet (or skip test if this fixture is used)
         return None
 
 
@@ -294,7 +308,6 @@ def sample_test_data() -> (
     tuple[list[School], list[Course], list[Student], list[Enrollment]]
 ):
     """Create complete sample test data using factory functions."""
-    # This now directly calls create_complete_test_data as models are assumed available.
     return create_complete_test_data()
 
 
@@ -363,18 +376,17 @@ def test_fastapi_app(smart_fastapi_templates: SmartFastApiTemplates) -> FastAPI:
     smart_response = create_smart_response(smart_fastapi_templates)
 
     @app.get("/")
-    async def root():  # 'request' parameter is not used in FastAPI >= 0.100.0 without Request dependency
+    async def root():
         return {"message": "Hello from SmartTemplates test app"}
 
     @app.get("/health")
-    async def health():  # 'request' parameter removed for consistency
+    async def health():
         return {"status": "healthy", "service": "smarttemplates-test"}
 
-    # Add business routes directly, as models are assumed available
+    # Business routes using smart_response decorator
     @app.get("/schools/{school_id}")
     @smart_response("school/dashboard.html")
     async def get_school(school_id: int):
-        # Create a test school with realistic data
         school = create_sample_school(f"Test School {school_id}", "Test City", "CA")
         school.id = school_id
         return school
@@ -399,13 +411,49 @@ def test_fastapi_app(smart_fastapi_templates: SmartFastApiTemplates) -> FastAPI:
         student.id = student_id
         return student
 
+    @app.get("/courses/{course_id}")
+    @smart_response("course/detail.html")
+    async def get_course(course_id: int):
+        from tests.models.business_objects import create_sample_course
+        course = create_sample_course(f"Test Course {course_id}", f"CS{course_id:03d}")
+        course.id = course_id
+        return course
+
+    # API routes (should return JSON regardless of Accept header)
+    @app.get("/api/schools")
+    async def api_list_schools():
+        schools = [
+            create_sample_school("API School 1", "API City", "CA"),
+            create_sample_school("API School 2", "API City", "TX"),
+        ]
+        return {"schools": [s.to_template_dict() for s in schools]}
+
+    # Error routes for testing
+    @app.get("/error/template")
+    @smart_response("nonexistent/template.html")
+    async def template_error():
+        return {"message": "This should cause a template error"}
+
+    return app
+
+
+@pytest.fixture  
+def test_client(test_fastapi_app: FastAPI) -> TestClient:
+    """Create a test client for the FastAPI application."""
+    return TestClient(test_fastapi_app)
+
+
+@pytest.fixture
+def api_test_app() -> FastAPI:
+    """Create the full API test application for integration testing."""
+    from tests.api.app import app
     return app
 
 
 @pytest.fixture
-def test_client(test_fastapi_app: FastAPI) -> TestClient:
-    """Create a test client for the FastAPI application."""
-    return TestClient(test_fastapi_app)
+def api_test_client(api_test_app: FastAPI) -> TestClient:
+    """Create a test client for the full API test application."""
+    return TestClient(api_test_app)
 
 
 @pytest.fixture
@@ -425,7 +473,7 @@ def render_error_context() -> dict[str, Any]:
     """Create a context that will cause rendering errors for testing."""
     return {
         "undefined_variable": "{{ missing_var }}",
-        "invalid_syntax": "{% invalid syntax %}",  # Jinja will likely catch this as a template syntax error
+        "invalid_syntax": "{% invalid syntax %}",
     }
 
 
@@ -444,13 +492,55 @@ def assert_no_template_errors(error: Any) -> None:
 def assert_template_error(error: Any, expected_error_type: str) -> None:
     """Assert that a template error occurred with expected type."""
     assert error is not None, "Expected template error but none occurred"
-    # Adjusted access based on the likely structure of SmartTemplates' error object
     assert hasattr(error, "error") and hasattr(
         error.error, "error_type"
     ), "Error object does not have expected structure for error type checking."
     assert (
         error.error.error_type == expected_error_type
     ), f"Expected error type '{expected_error_type}', got '{error.error.error_type}'"
+
+
+def assert_json_response(response, expected_keys: list[str] = None) -> dict:
+    """Assert response is JSON and optionally check for expected keys."""
+    assert "application/json" in response.headers.get("content-type", "")
+    data = response.json()
+    assert isinstance(data, dict)
+    
+    if expected_keys:
+        for key in expected_keys:
+            assert key in data, f"Expected key '{key}' not found in JSON response"
+    
+    return data
+
+
+def assert_html_response(response, expected_elements: list[str] = None) -> str:
+    """Assert response is HTML and optionally check for expected elements."""
+    assert "text/html" in response.headers.get("content-type", "")
+    content = response.text
+    assert "<!DOCTYPE html>" in content or "<html" in content
+    
+    if expected_elements:
+        assert_template_rendered(content, expected_elements)
+    
+    return content
+
+
+def assert_smart_response_works(client: TestClient, endpoint: str, object_name: str) -> None:
+    """Assert that an endpoint works with both JSON and HTML content negotiation."""
+    # Test HTML response
+    html_response = client.get(endpoint, headers={"Accept": "text/html"})
+    assert html_response.status_code == 200
+    html_content = assert_html_response(html_response, [object_name])
+    
+    # Test JSON response  
+    json_response = client.get(endpoint, headers={"Accept": "application/json"})
+    assert json_response.status_code == 200
+    json_data = assert_json_response(json_response)
+    
+    # Both should contain the object name in some form
+    assert object_name in html_content
+    # JSON might have the name in nested structure, so check string representation
+    assert object_name in str(json_data)
 
 
 # Pytest configuration
@@ -466,10 +556,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "business: mark test as business scenario test")
     config.addinivalue_line("markers", "fastapi: mark test as FastAPI related")
     config.addinivalue_line("markers", "templates: mark test as template related")
-    config.addinivalue_line(
-        "markers",
-        "models: mark test as dependent on business models",  # Added this marker
-    )
+    config.addinivalue_line("markers", "models: mark test as dependent on business models")
+    config.addinivalue_line("markers", "api: mark test as API integration test")
+    config.addinivalue_line("markers", "e2e: mark test as end-to-end test")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -480,6 +569,9 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.unit)
         elif "integration" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
+        elif "api" in str(item.fspath):
+            item.add_marker(pytest.mark.api)
+            item.add_marker(pytest.mark.integration)  # API tests are integration tests
 
         # Add markers based on test names and business scenarios
         if "fastapi" in item.name.lower():
@@ -492,6 +584,7 @@ def pytest_collection_modifyitems(config, items):
             or "model" in item.name.lower()
         ):
             item.add_marker(pytest.mark.business)
-            item.add_marker(
-                pytest.mark.models
-            )  # Automatically mark tests using models as such
+            item.add_marker(pytest.mark.models)
+        if "e2e" in item.name.lower() or "end_to_end" in item.name.lower():
+            item.add_marker(pytest.mark.e2e)
+            item.add_marker(pytest.mark.slow)
